@@ -3,13 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const { slug } = await params;
     const chapters = await prisma.chapter.findMany({
       where: {
         subject: {
-          slug: params.slug
+          slug
         }
       },
       include: {

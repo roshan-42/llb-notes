@@ -6,9 +6,10 @@ import { notFound } from 'next/navigation';
 export default async function SubjectHubPage({
   params
 }: {
-  params: { year: string; slug: string };
+  params: Promise<{ year: string; slug: string }>;
 }) {
-  const yearNum = parseInt(params.year);
+  const { year, slug } = await params;
+  const yearNum = parseInt(year);
 
   if (isNaN(yearNum) || yearNum < 1 || yearNum > 3) {
     notFound();
@@ -16,7 +17,7 @@ export default async function SubjectHubPage({
 
   const subject = await prisma.subject.findFirst({
     where: {
-      slug: params.slug,
+      slug,
       year: { year: yearNum }
     },
     include: {
@@ -54,7 +55,7 @@ export default async function SubjectHubPage({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Notes Section */}
           <Link
-            href={`/year/${yearNum}/subject/${params.slug}/notes`}
+            href={`/year/${yearNum}/subject/${slug}/notes`}
             className="group relative overflow-hidden rounded-lg border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 p-8 hover:border-blue-600/50 transition-all hover:shadow-xl hover:shadow-blue-600/10"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl group-hover:bg-blue-600/20 transition-colors" />
@@ -77,7 +78,7 @@ export default async function SubjectHubPage({
 
           {/* Exams Section */}
           <Link
-            href={`/year/${yearNum}/subject/${params.slug}/exams`}
+            href={`/year/${yearNum}/subject/${slug}/exams`}
             className="group relative overflow-hidden rounded-lg border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 p-8 hover:border-purple-600/50 transition-all hover:shadow-xl hover:shadow-purple-600/10"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-600/10 rounded-full blur-3xl group-hover:bg-purple-600/20 transition-colors" />

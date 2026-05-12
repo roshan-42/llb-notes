@@ -23,13 +23,14 @@ interface Question {
 }
 
 interface ExamsPageProps {
-  params: {
+  params: Promise<{
     year: string;
     slug: string;
-  };
+  }>;
 }
 
 export default function ExamsPage({ params }: ExamsPageProps) {
+  const [paramsData, setParamsData] = useState<{ year: string; slug: string } | null>(null);
   const [language, setLanguage] = useState<'en' | 'np'>('en');
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null);
@@ -38,9 +39,15 @@ export default function ExamsPage({ params }: ExamsPageProps) {
   const [filterType, setFilterType] = useState<'all' | 'past' | 'possible'>('all');
 
   useEffect(() => {
+    params.then(setParamsData);
+  }, [params]);
+
+  useEffect(() => {
+    if (!paramsData) return;
+
     const fetchChapters = async () => {
       try {
-        const res = await fetch(`/api/subjects/${params.slug}/chapters`);
+        const res = await fetch(`/api/subjects/${paramsData.slug}/chapters`);
         const data = await res.json();
         setChapters(data);
         if (data.length > 0) {
@@ -54,7 +61,7 @@ export default function ExamsPage({ params }: ExamsPageProps) {
     };
 
     fetchChapters();
-  }, [params.slug]);
+  }, [paramsData]);
 
   useEffect(() => {
     if (!selectedChapterId) return;
@@ -94,7 +101,7 @@ export default function ExamsPage({ params }: ExamsPageProps) {
       <div className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <Link
-            href={`/year/${params.year}/subject/${params.slug}`}
+            href={paramsData ? `/year/${paramsData.year}/subject/${paramsData.slug}` : '#'}
             className="inline-flex items-center gap-2 text-amber-500 hover:text-amber-400 mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />

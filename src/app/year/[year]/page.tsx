@@ -6,15 +6,16 @@ import { notFound } from 'next/navigation';
 export default async function YearPage({
   params
 }: {
-  params: { year: string };
+  params: Promise<{ year: string }>;
 }) {
-  const yearNum = parseInt(params.year);
+  const { year: yearStr } = await params;
+  const yearNum = parseInt(yearStr);
 
   if (isNaN(yearNum) || yearNum < 1 || yearNum > 3) {
     notFound();
   }
 
-  const year = await prisma.year.findUnique({
+  const yearData = await prisma.year.findUnique({
     where: { year: yearNum },
     include: {
       subjects: {
@@ -23,7 +24,7 @@ export default async function YearPage({
     }
   });
 
-  if (!year) {
+  if (!yearData) {
     notFound();
   }
 
@@ -54,14 +55,14 @@ export default async function YearPage({
       <div className="max-w-7xl mx-auto px-6 py-12">
         <h2 className="text-2xl font-semibold text-white mb-8">Subjects</h2>
 
-        {year.subjects.length === 0 ? (
+        {yearData.subjects.length === 0 ? (
           <div className="text-center py-12">
             <BookMarked className="w-12 h-12 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400">No subjects available for Year {yearNum}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {year.subjects.map(subject => (
+            {yearData.subjects.map(subject => (
               <Link
                 key={subject.id}
                 href={`/year/${yearNum}/subject/${subject.slug}`}

@@ -10,6 +10,7 @@ interface Chapter {
   id: number;
   title_en: string;
   title_np: string;
+  order: number;
   notes: Note[];
 }
 
@@ -22,13 +23,14 @@ interface Note {
 }
 
 interface NotesPageProps {
-  params: {
+  params: Promise<{
     year: string;
     slug: string;
-  };
+  }>;
 }
 
 export default function NotesPage({ params }: NotesPageProps) {
+  const [paramsData, setParamsData] = useState<{ year: string; slug: string } | null>(null);
   const [language, setLanguage] = useState<'en' | 'np'>('en');
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
@@ -36,9 +38,15 @@ export default function NotesPage({ params }: NotesPageProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    params.then(setParamsData);
+  }, [params]);
+
+  useEffect(() => {
+    if (!paramsData) return;
+
     const fetchChapters = async () => {
       try {
-        const res = await fetch(`/api/subjects/${params.slug}/chapters`);
+        const res = await fetch(`/api/subjects/${paramsData.slug}/chapters`);
         const data = await res.json();
         setChapters(data);
         if (data.length > 0) {
@@ -53,7 +61,7 @@ export default function NotesPage({ params }: NotesPageProps) {
     };
 
     fetchChapters();
-  }, [params.slug]);
+  }, [paramsData]);
 
   const toggleChapter = (chapterId: number) => {
     const newExpanded = new Set(expandedChapters);
@@ -79,7 +87,7 @@ export default function NotesPage({ params }: NotesPageProps) {
       <aside className="w-80 border-r border-slate-700 bg-slate-900 sticky top-0 h-screen overflow-y-auto">
         <div className="p-6 border-b border-slate-700">
           <Link
-            href={`/year/${params.year}/subject/${params.slug}`}
+            href={paramsData ? `/year/${paramsData.year}/subject/${paramsData.slug}` : '#'}
             className="inline-flex items-center gap-2 text-amber-500 hover:text-amber-400 mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
