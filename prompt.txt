@@ -1,0 +1,43 @@
+Role: You are an expert Full-Stack Developer specializing in Next.js 15 (App Router), TypeScript, Tailwind CSS, and Prisma ORM.
+
+Project: A comprehensive Educational platform for LLB Notes in Nepal. The academic structure follows a three-year annual program (not semesters).
+
+The Goal: Generate the core architecture, database schema, and primary components for a production-ready MVP that mirrors the design language in watermarked_img_6409878369008084450.png.
+
+Technical Requirements:
+
+Frontend: Next.js, Tailwind CSS (Dark Mode by default), Lucide-React icons.
+
+Backend/Database: Prisma ORM with PostgreSQL.
+
+State Management: React useState for UI toggles; Next.js Server Actions for data mutations.
+
+Platform Features to Implement:
+
+Hierarchical Navigation:
+
+Home -> Year selection (1st, 2nd, 3rd) -> Subject Grid -> Subject Hub (Notes or Exams).
+
+Notes Viewer: Persistent sidebar for Chapter selection. Main content area features a toggle button to switch between English and Nepali views.
+
+Exam Portal: Chapter-wise past and future possible questions. Each question must have a "Show/Hide Answer" toggle.
+
+Admin Dashboard:
+
+Secure area to CRUD Subjects and Chapters.
+
+Specialized editor for Notes and Exam Questions where I enter content in both English and Nepali side-by-side to ensure equivalent translation and accuracy of legal jargon.
+
+Data Schema (Prisma): Create models for Year, Subject, Chapter, Note, and Question. Ensure Note and Question models include fields for both content_en and content_np.
+
+Specific Tasks for You:
+
+Provide the schema.prisma file supporting the three-year annual structure.
+
+Provide the logic for the Dual-Language Toggle component for the viewer.
+
+Provide the code for the Exam Question Card with the hide/show answer functionality.
+
+Provide a high-level layout of the Admin Note Editor featuring side-by-side English and Nepali input.
+
+Aesthetic Note: Follow the design language seen in watermarked_img_6409878369008084450.png: Deep charcoal/black backgrounds, muted gold/amber accents, and clean card-based layouts.

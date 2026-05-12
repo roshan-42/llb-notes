@@ -1,0 +1,85 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Year {
+  id       Int      @id @default(autoincrement())
+  year     Int      @unique // 1, 2, 3
+  subjects Subject[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Subject {
+  id        Int      @id @default(autoincrement())
+  yearId    Int
+  year      Year     @relation(fields: [yearId], references: [id], onDelete: Cascade)
+  name_en   String   // "Constitutional Law"
+  name_np   String   // Nepali name
+  slug      String   @unique
+  icon      String?  // Lucide icon name
+  chapters  Chapter[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([yearId, slug])
+}
+
+model Chapter {
+  id        Int      @id @default(autoincrement())
+  subjectId Int
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  title_en  String   // "Introduction to Constitutional Law"
+  title_np  String   // Nepali title
+  order     Int      // Chapter order within subject
+  notes     Note[]
+  questions Question[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([subjectId, order])
+}
+
+model Note {
+  id        Int      @id @default(autoincrement())
+  chapterId Int
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  title_en  String
+  title_np  String
+  content_en String @db.Text
+  content_np String @db.Text
+  order     Int      // Note order within chapter
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([chapterId, order])
+}
+
+model Question {
+  id        Int      @id @default(autoincrement())
+  chapterId Int
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  question_en String @db.Text
+  question_np String @db.Text
+  answer_en   String @db.Text
+  answer_np   String @db.Text
+  type      String   @default("past") // "past" or "possible"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  password  String   // Hash this with bcrypt
+  role      String   @default("user") // "user", "admin"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

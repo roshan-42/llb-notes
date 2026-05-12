@@ -1,0 +1,293 @@
+===============================================
+LLBNOTES - DATABASE SETUP GUIDE
+(Like explaining to a 10-year-old)
+===============================================
+
+Think of your app like a diary app:
+- Your database = a physical notebook where you write everything
+- Prisma = the system that helps you read/write in that notebook
+- Right now: the notebook doesn't exist yet!
+
+Let's fix this step by step...
+
+===============================================
+STEP 1: Create Your Secret .env File
+===============================================
+
+Your app needs a secret file called ".env" that has the password to 
+the database. It's like a secret key to unlock the notebook.
+
+Command to run:
+cp .env.example .env
+
+What this does: Makes a copy of .env.example and names it .env
+
+Check it worked:
+ls -la .env
+
+You should see ".env" file listed.
+
+
+===============================================
+STEP 2: Install PostgreSQL (The Notebook)
+===============================================
+
+PostgreSQL is the database - the actual notebook where notes are stored.
+
+OPTION A - Easy Way (Using Docker - a container):
+Run this command:
+
+docker run --name llbnotes-db \
+  -e POSTGRES_USER=user \
+  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_DB=llbnotes \
+  -p 5432:5432 \
+  -d postgres:15
+
+Explanation:
+- This creates a special box (Docker container) with PostgreSQL inside
+- --name llbnotes-db = giving it a name
+- POSTGRES_USER=user = username to login
+- POSTGRES_PASSWORD=password = password to login
+- POSTGRES_DB=llbnotes = name of your database (notebook)
+- -p 5432:5432 = which door (port) to use to connect
+- -d = run in background
+
+Check it's running:
+docker ps
+
+You should see "llbnotes-db" in the list.
+
+
+OPTION B - Hard Way (Installing PostgreSQL on your computer):
+Skip this if you did Option A.
+
+If you want to install PostgreSQL locally, follow:
+https://www.postgresql.org/download/
+
+Then create the database:
+createdb llbnotes
+
+
+===============================================
+STEP 3: Check Your .env File
+===============================================
+
+Open the file:
+cat .env
+
+You should see:
+DATABASE_URL="postgresql://user:password@localhost:5432/llbnotes"
+NEXT_PUBLIC_API_URL="http://localhost:3000"
+
+If you used different username/password in Option A, change them in .env.
+
+
+===============================================
+STEP 4: Tell Prisma About Your Database
+===============================================
+
+Run this command:
+npm run db:generate
+
+This tells Prisma: "Hey, here's the database setup. Get ready to talk to it."
+
+
+===============================================
+STEP 5: Create the Tables (Most Important!)
+===============================================
+
+Run this command:
+npm run db:push
+
+This command:
+1. Reads your Prisma schema (the blueprint)
+2. Connects to your PostgreSQL database (the notebook)
+3. Creates all the tables (like pages in the notebook)
+
+You should see something like:
+✓ Your database is now in sync with your Prisma schema.
+
+
+===============================================
+STEP 6: TEST IF CONNECTION IS WORKING
+===============================================
+
+Run this command:
+npm run db:studio
+
+What this does:
+- Opens a visual tool to see your database
+- Shows all your tables
+- Lets you add/edit data easily
+
+Look for:
+- Website opens at http://localhost:5555
+- You see tables: Year, Subject, Chapter, Note, Question, User
+- No red error messages
+
+If you see:
+✓ = CONNECTION WORKING! 🎉
+✗ or error = CONNECTION NOT WORKING 😞
+
+
+===============================================
+STEP 7: Troubleshooting - Connection Not Working?
+===============================================
+
+Problem 1: "Environment variable not found: DATABASE_URL"
+- Check: Does .env file exist? (ls .env)
+- Check: Did you run (npm run db:generate)?
+- Fix: Copy .env.example again, then edit it
+
+Problem 2: "Connection refused"
+- Check: Is Docker running? (docker ps)
+- Check: Is PostgreSQL running in Docker?
+- Fix: Restart Docker:
+  docker restart llbnotes-db
+
+Problem 3: "Database llbnotes does not exist"
+- You created PostgreSQL but didn't create the database
+- Fix: Run (npm run db:push) to create tables
+
+Problem 4: Can't connect even after checking everything
+- Reset everything:
+  docker stop llbnotes-db
+  docker rm llbnotes-db
+  docker run --name llbnotes-db \
+    -e POSTGRES_USER=user \
+    -e POSTGRES_PASSWORD=password \
+    -e POSTGRES_DB=llbnotes \
+    -p 5432:5432 \
+    -d postgres:15
+  npm run db:push
+
+
+===============================================
+STEP 8: Add Your First Note!
+===============================================
+
+Now that connection is working, add your first note.
+
+Create file: scripts/add-note.ts
+
+Paste this code:
+
+---START CODE---
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
+
+async function main() {
+  console.log("Creating year...")
+  
+  const year = await prisma.year.create({
+    data: {
+      year: 1,
+      subjects: {
+        create: {
+          name_en: "Math",
+          name_np: "गणित",
+          slug: "math",
+          chapters: {
+            create: {
+              title_en: "Numbers",
+              title_np: "संख्या",
+              order: 1,
+              notes: {
+                create: {
+                  title_en: "What are numbers?",
+                  title_np: "संख्या के हुन्?",
+                  content_en: "Numbers are 1, 2, 3, 4...",
+                  content_np: "संख्या १, २, ३, ४...",
+                  order: 1,
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    include: {
+      subjects: {
+        include: {
+          chapters: {
+            include: {
+              notes: true
+            }
+          }
+        }
+      }
+    }
+  })
+
+  console.log("✓ SUCCESS! Your note was saved!")
+  console.log(JSON.stringify(year, null, 2))
+}
+
+main()
+  .catch(e => {
+    console.error("✗ ERROR! Something went wrong:")
+    console.error(e.message)
+    process.exit(1)
+  })
+  .finally(async () => {
+    await prisma.$disconnect()
+  })
+---END CODE---
+
+Then run:
+npx ts-node scripts/add-note.ts
+
+What to look for:
+✓ SUCCESS! Your note was saved! = CONNECTION WORKING! ✅
+✗ ERROR! Something went wrong: = CONNECTION NOT WORKING! ❌
+
+
+===============================================
+STEP 9: View Your Data in Prisma Studio
+===============================================
+
+Run:
+npm run db:studio
+
+This opens a visual interface where you can:
+- See all your notes
+- Add new notes
+- Edit notes
+- Delete notes
+
+Click on "Note" table to see your first note!
+
+
+===============================================
+QUICK CHECKLIST - Did I Do Everything?
+===============================================
+
+☐ Created .env file (cp .env.example .env)
+☐ Installed PostgreSQL with Docker (or locally)
+☐ Checked DATABASE_URL in .env file
+☐ Ran (npm run db:generate)
+☐ Ran (npm run db:push)
+☐ Opened (npm run db:studio) - saw tables without errors
+☐ Created scripts/add-note.ts file
+☐ Ran (npx ts-node scripts/add-note.ts)
+☐ Saw "✓ SUCCESS!" message
+☐ Opened (npm run db:studio) again and saw my first note!
+
+If you checked all boxes = YOU'RE DONE! 🎉
+
+
+===============================================
+WHAT HAPPENS NEXT?
+===============================================
+
+Now you can:
+1. Start the app: npm run dev
+2. Visit http://localhost:3000
+3. Build the UI to add notes through the website
+4. Add more subjects, chapters, notes
+
+Your database is ready to go!
+
+Good luck! 🚀
