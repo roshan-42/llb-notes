@@ -1,14 +1,40 @@
-import { prisma } from '@/lib/prisma';
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BarChart3, BookOpen, Settings, ArrowLeft } from 'lucide-react';
 
-export default async function AdminDashboard() {
-  const stats = await Promise.all([
-    prisma.subject.count(),
-    prisma.chapter.count(),
-    prisma.note.count(),
-    prisma.question.count()
-  ]);
+export default function AdminDashboard() {
+  const [stats, setStats] = useState<[number, number, number, number] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Fetch data from multiple endpoints
+        const [subjectsRes, chaptersRes, notesRes, questionsRes] = await Promise.all([
+          fetch('/api/admin/subjects-count'),
+          fetch('/api/admin/chapters-count'),
+          fetch('/api/admin/notes-count'),
+          fetch('/api/admin/questions-count')
+        ]);
+
+        const subjects = await subjectsRes.json();
+        const chapters = await chaptersRes.json();
+        const notes = await notesRes.json();
+        const questions = await questionsRes.json();
+
+        setStats([subjects.count, chapters.count, notes.count, questions.count]);
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+        setStats([0, 0, 0, 0]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   return (
     <div className="min-h-screen">
@@ -30,28 +56,35 @@ export default async function AdminDashboard() {
       {/* Stats */}
       <div className="max-w-7xl mx-auto px-6 py-12">
         <h2 className="text-2xl font-semibold text-white mb-8">Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-          <div className="p-6 rounded-lg border border-slate-700 bg-slate-800">
-            <BookOpen className="w-8 h-8 text-blue-400 mb-4" />
-            <div className="text-3xl font-bold text-white">{stats[0]}</div>
-            <div className="text-sm text-gray-400 mt-1">Subjects</div>
+
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="text-gray-400">Loading stats...</div>
           </div>
-          <div className="p-6 rounded-lg border border-slate-700 bg-slate-800">
-            <BarChart3 className="w-8 h-8 text-purple-400 mb-4" />
-            <div className="text-3xl font-bold text-white">{stats[1]}</div>
-            <div className="text-sm text-gray-400 mt-1">Chapters</div>
-          </div>
-          <div className="p-6 rounded-lg border border-slate-700 bg-slate-800">
-            <BookOpen className="w-8 h-8 text-green-400 mb-4" />
-            <div className="text-3xl font-bold text-white">{stats[2]}</div>
-            <div className="text-sm text-gray-400 mt-1">Notes</div>
-          </div>
-          <div className="p-6 rounded-lg border border-slate-700 bg-slate-800">
-            <Settings className="w-8 h-8 text-amber-400 mb-4" />
-            <div className="text-3xl font-bold text-white">{stats[3]}</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+            <div className="p-6 rounded-lg border border-slate-700 bg-slate-800">
+              <BookOpen className="w-8 h-8 text-blue-400 mb-4" />
+              <div className="text-3xl font-bold text-white">{stats?.[0] || 0}</div>
+              <div className="text-sm text-gray-400 mt-1">Subjects</div>
+            </div>
+            <div className="p-6 rounded-lg border border-slate-700 bg-slate-800">
+              <BarChart3 className="w-8 h-8 text-purple-400 mb-4" />
+              <div className="text-3xl font-bold text-white">{stats?.[1] || 0}</div>
+              <div className="text-sm text-gray-400 mt-1">Chapters</div>
+            </div>
+            <div className="p-6 rounded-lg border border-slate-700 bg-slate-800">
+              <BookOpen className="w-8 h-8 text-green-400 mb-4" />
+              <div className="text-3xl font-bold text-white">{stats?.[2] || 0}</div>
+              <div className="text-sm text-gray-400 mt-1">Notes</div>
+            </div>
+            <div className="p-6 rounded-lg border border-slate-700 bg-slate-800">
+              <Settings className="w-8 h-8 text-amber-400 mb-4" />
+            <div className="text-3xl font-bold text-white">{stats?.[3] || 0}</div>
             <div className="text-sm text-gray-400 mt-1">Questions</div>
           </div>
         </div>
+        )}
 
         {/* Action Cards */}
         <h2 className="text-2xl font-semibold text-white mb-8">Management</h2>
