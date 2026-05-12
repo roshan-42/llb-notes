@@ -1,15 +1,38 @@
-import { prisma } from '@/lib/prisma';
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Plus, Trash2, Edit } from 'lucide-react';
 
-export default async function SubjectsPage() {
-  const subjects = await prisma.subject.findMany({
-    include: {
-      year: true,
-      chapters: true
-    },
-    orderBy: [{ year: { year: 'asc' } }, { name_en: 'asc' }]
-  });
+interface Subject {
+  id: number;
+  name_en: string;
+  name_np: string;
+  slug: string;
+  year: { year: number };
+  chapters: Array<any>;
+}
+
+export default function SubjectsPage() {
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const res = await fetch('/api/admin/subjects');
+        const data = await res.json();
+        setSubjects(data);
+      } catch (error) {
+        console.error('Failed to fetch subjects:', error);
+        setSubjects([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSubjects();
+  }, []);
 
   const groupedByYear = subjects.reduce(
     (acc, subject) => {
@@ -18,7 +41,7 @@ export default async function SubjectsPage() {
       acc[year].push(subject);
       return acc;
     },
-    {} as Record<number, typeof subjects>
+    {} as Record<number, Subject[]>
   );
 
   return (
@@ -48,6 +71,16 @@ export default async function SubjectsPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-6 py-12">
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="text-gray-400">Loading subjects...</div>
+          </div>
+        ) : Object.entries(groupedByYear).length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-400">No subjects found</div>
+          </div>
+        ) : (
+          <>
         {Object.entries(groupedByYear).map(([year, yearSubjects]) => (
           <div key={year} className="mb-12">
             <h2 className="text-2xl font-semibold text-white mb-6">Year {year}</h2>
@@ -93,6 +126,8 @@ export default async function SubjectsPage() {
             </div>
           </div>
         ))}
+        </>
+        )}
       </div>
     </div>
   );
