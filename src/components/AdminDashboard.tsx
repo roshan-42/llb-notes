@@ -372,7 +372,12 @@ export default function AdminDashboard() {
                 [&_u]:underline
                 [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4
                 [&_li]:text-gray-300 [&_code]:bg-slate-900 [&_code]:px-1 [&_code]:rounded [&_code]:text-red-400
-                [&_a]:text-blue-400 [&_a]:underline">
+                [&_a]:text-blue-400 [&_a]:underline
+                [&_table]:border-collapse [&_table]:w-full [&_table]:my-4
+                [&_thead]:bg-slate-900
+                [&_th]:border [&_th]:border-slate-600 [&_th]:px-3 [&_th]:py-2 [&_th]:text-white [&_th]:font-semibold [&_th]:text-left
+                [&_td]:border [&_td]:border-slate-600 [&_td]:px-3 [&_td]:py-2 [&_td]:text-gray-300
+                [&_tbody_tr]:hover:bg-slate-900/50">
                 {selectedNote.content_en && selectedNote.content_en.trim().startsWith('<') ? (
                   <div dangerouslySetInnerHTML={{ __html: selectedNote.content_en }} />
                 ) : (

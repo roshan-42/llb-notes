@@ -5,7 +5,11 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
-import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Undo2, Redo2, Code } from 'lucide-react';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Undo2, Redo2, Code, Grid3x3 } from 'lucide-react';
 
 interface RichTextEditorProps {
   value: string;
@@ -29,7 +33,13 @@ export default function RichTextEditor({
           levels: [1, 2, 3]
         }
       }),
-      Underline
+      Underline,
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: value,
     onUpdate: ({ editor }) => {
@@ -55,6 +65,8 @@ export default function RichTextEditor({
   const toggleBulletList = () => editor.chain().focus().toggleBulletList().run();
   const toggleOrderedList = () => editor.chain().focus().toggleOrderedList().run();
   const toggleCodeBlock = () => editor.chain().focus().toggleCodeBlock().run();
+  const insertTable = () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+  const deleteTable = () => editor.chain().focus().deleteTable().run();
   const undo = () => editor.chain().focus().undo().run();
   const redo = () => editor.chain().focus().redo().run();
 
@@ -132,6 +144,27 @@ export default function RichTextEditor({
 
         <button
           type="button"
+          onClick={insertTable}
+          disabled={disabled}
+          className={buttonClass(editor.isActive('table'))}
+          title="Insert Table"
+        >
+          <Grid3x3 className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={deleteTable}
+          disabled={disabled || !editor.isActive('table')}
+          className={buttonClass(false)}
+          title="Delete Table"
+        >
+          <span className="text-xs">✕ Table</span>
+        </button>
+
+        <div className="w-px bg-slate-600" />
+
+        <button
+          type="button"
           onClick={undo}
           disabled={disabled || !editor.can().undo()}
           className={buttonClass(false)}
@@ -174,7 +207,12 @@ export default function RichTextEditor({
             [&_code]:bg-slate-900 [&_code]:px-2 [&_code]:py-1 [&_code]:rounded [&_code]:text-orange-400 [&_code]:text-sm
             [&_pre]:bg-slate-900 [&_pre]:p-3 [&_pre]:rounded [&_pre]:overflow-x-auto [&_pre]:my-2
             [&_blockquote]:border-l-4 [&_blockquote]:border-amber-600 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:my-2
-            [&_a]:text-blue-400 [&_a]:underline"
+            [&_a]:text-blue-400 [&_a]:underline
+            [&_table]:border-collapse [&_table]:w-full [&_table]:my-4
+            [&_thead]:bg-slate-800
+            [&_th]:border [&_th]:border-slate-600 [&_th]:px-3 [&_th]:py-2 [&_th]:text-white [&_th]:font-semibold [&_th]:text-left
+            [&_td]:border [&_td]:border-slate-600 [&_td]:px-3 [&_td]:py-2 [&_td]:text-white
+            [&_tbody_tr]:hover:bg-slate-800/50"
         />
       </div>
 
