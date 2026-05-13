@@ -1,6 +1,7 @@
 'use client';
 
 import { parseMarkdown } from '@/lib/markdown';
+import { processHtmlWithMath } from '@/lib/katex-utils';
 
 interface NoteBlock {
   id: string;
@@ -15,6 +16,8 @@ function isHtml(content: string): boolean {
 }
 
 function HtmlRenderer({ content }: { content: string }) {
+  const contentWithMath = processHtmlWithMath(content);
+
   return (
     <div
       className="prose prose-invert max-w-none
@@ -36,8 +39,12 @@ function HtmlRenderer({ content }: { content: string }) {
         [&_thead]:bg-slate-800
         [&_th]:border [&_th]:border-slate-600 [&_th]:px-3 [&_th]:py-2 [&_th]:text-white [&_th]:font-semibold [&_th]:text-left
         [&_td]:border [&_td]:border-slate-600 [&_td]:px-3 [&_td]:py-2 [&_td]:text-gray-300
-        [&_tbody_tr]:hover:bg-slate-800/50"
-      dangerouslySetInnerHTML={{ __html: content }}
+        [&_tbody_tr]:hover:bg-slate-800/50
+        [&_.math-display]:flex [&_.math-display]:justify-center [&_.math-display]:my-4 [&_.math-display]:overflow-x-auto
+        [&_.math-inline]:inline
+        [&_.katex]:text-gray-300
+        [&_.katex_display]:my-2"
+      dangerouslySetInnerHTML={{ __html: contentWithMath }}
     />
   );
 }
