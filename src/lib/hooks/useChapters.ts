@@ -27,18 +27,14 @@ export interface Chapter {
   questions: Question[];
 }
 
-interface ChaptersResponse {
-  chapters: Chapter[];
-}
-
 export function useChapters(slug: string) {
   return useQuery({
     queryKey: ['chapters', slug],
     queryFn: async () => {
-      const { data } = await axiosInstance.get<ChaptersResponse>(
+      const { data } = await axiosInstance.get<Chapter[]>(
         `/api/subjects/${slug}/chapters`
       );
-      return data.chapters;
+      return data;
     },
     enabled: !!slug,
   });
