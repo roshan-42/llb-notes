@@ -2,9 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Trash2, Edit } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit, AlertCircle } from 'lucide-react';
 import AdminNoteEditor from '@/components/AdminNoteEditor';
 import { updateNote, deleteNote } from '@/lib/actions';
+
+interface Chapter {
+  id: number;
+  title_en: string;
+  order: number;
+  subject: {
+    id: number;
+    name_en: string;
+    year: {
+      id: number;
+      year: number;
+    };
+  };
+}
 
 interface Note {
   id: number;
@@ -12,45 +26,55 @@ interface Note {
   title_np: string;
   content_en: string;
   content_np: string;
-  chapter: {
-    id: number;
-    title_en: string;
-    order: number;
-    subject: {
-      name_en: string;
-      year: {
-        year: number;
-      };
-    };
-  };
+  order: number;
+  chapter: Chapter;
 }
 
 export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchNotes = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch('/api/admin/notes');
-        const data = await res.json();
-        setNotes(data);
-      } catch (error) {
-        console.error('Error fetching notes:', error);
+        const [notesRes, chaptersRes] = await Promise.all([
+          fetch('/api/admin/notes'),
+          fetch('/api/admin/chapters')
+        ]);
+        const notesData = await notesRes.json();
+        const chaptersData = await chaptersRes.json();
+        setNotes(notesData);
+        setChapters(chaptersData);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to load data');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchNotes();
+    fetchData();
   }, []);
 
   const handleEdit = (note: Note) => {
     setSelectedNote(note);
+    setSelectedChapter(note.chapter);
     setIsEditing(true);
+    setError(null);
+  };
+
+  const handleNew = () => {
+    setSelectedNote(null);
+    setSelectedChapter(null);
+    setIsCreating(true);
+    setError(null);
   };
 
   const handleSave = async (data: {
@@ -59,22 +83,56 @@ export default function NotesPage() {
     content_en: string;
     content_np: string;
   }) => {
-    if (!selectedNote) return;
+    try {
+      if (isEditing && selectedNote) {
+        const result = await updateNote(selectedNote.id, data);
+        if (result.success) {
+          setNotes(notes.map(n => (n.id === selectedNote.id ? { ...n, ...data } : n)));
+          setIsEditing(false);
+          setSelectedNote(null);
+        } else {
+          throw new Error(result.error || 'Failed to update note');
+        }
+      } else if (isCreating && selectedChapter) {
+        const res = await fetch('/api/admin/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...data,
+            chapterId: selectedChapter.id,
+            order: (notes.filter(n => n.chapter.id === selectedChapter.id).length || 0) + 1
+          })
+        });
 
-    const result = await updateNote(selectedNote.id, data);
-    if (result.success) {
-      setNotes(notes.map(n => (n.id === selectedNote.id ? { ...n, ...data } : n)));
-      setIsEditing(false);
-      setSelectedNote(null);
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Failed to create note');
+        }
+
+        const newNote = await res.json();
+        setNotes([newNote, ...notes]);
+        setIsCreating(false);
+        setSelectedNote(null);
+        setSelectedChapter(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save note');
+      throw err;
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this note?')) return;
 
-    const result = await deleteNote(id);
-    if (result.success) {
-      setNotes(notes.filter(n => n.id !== id));
+    try {
+      const result = await deleteNote(id);
+      if (result.success) {
+        setNotes(notes.filter(n => n.id !== id));
+      } else {
+        throw new Error(result.error || 'Failed to delete note');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete note');
     }
   };
 
@@ -99,15 +157,30 @@ export default function NotesPage() {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold text-white">Manage Notes</h1>
-              <p className="text-gray-400 mt-1">Edit bilingual notes with side-by-side editor</p>
+              <p className="text-gray-400 mt-1">Create and edit bilingual notes</p>
             </div>
-            <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium transition-colors">
+            <button
+              onClick={handleNew}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium transition-colors"
+            >
               <Plus className="w-4 h-4" />
               New Note
             </button>
           </div>
         </div>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-6 mt-4">
+          <div className="p-4 rounded-lg bg-red-900/20 border border-red-900/50 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-red-400">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-6 py-12">
@@ -122,9 +195,13 @@ export default function NotesPage() {
           />
         </div>
 
-        {/* Notes Table */}
+        {/* Notes List */}
         {isLoading ? (
           <div className="text-center text-gray-400">Loading...</div>
+        ) : filteredNotes.length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            {notes.length === 0 ? 'No notes yet. Create one to get started.' : 'No notes match your search.'}
+          </div>
         ) : (
           <div className="space-y-4">
             {filteredNotes.map(note => (
@@ -140,7 +217,7 @@ export default function NotesPage() {
                       <span>
                         Year {note.chapter.subject.year.year} • {note.chapter.subject.name_en}
                       </span>
-                      <span>Chapter {note.chapter.order}</span>
+                      <span>Chapter {note.chapter.order}: {note.chapter.title_en}</span>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -167,19 +244,113 @@ export default function NotesPage() {
       </div>
 
       {/* Editor Modal */}
-      {isEditing && selectedNote && (
-        <AdminNoteEditor
-          initialData={{
+      {(isEditing || isCreating) && (
+        <AdminNoteEditorWithChapterSelection
+          isCreating={isCreating}
+          initialData={selectedNote ? {
             title_en: selectedNote.title_en,
             title_np: selectedNote.title_np,
             content_en: selectedNote.content_en,
             content_np: selectedNote.content_np
-          }}
+          } : undefined}
+          selectedChapter={selectedChapter}
+          chapters={chapters}
+          onChapterChange={setSelectedChapter}
           onSave={handleSave}
           onCancel={() => {
             setIsEditing(false);
+            setIsCreating(false);
             setSelectedNote(null);
+            setSelectedChapter(null);
           }}
+        />
+      )}
+    </div>
+  );
+}
+
+function AdminNoteEditorWithChapterSelection({
+  isCreating,
+  initialData,
+  selectedChapter,
+  chapters,
+  onChapterChange,
+  onSave,
+  onCancel
+}: {
+  isCreating: boolean;
+  initialData?: {
+    title_en: string;
+    title_np: string;
+    content_en: string;
+    content_np: string;
+  };
+  selectedChapter: Chapter | null;
+  chapters: Chapter[];
+  onChapterChange: (chapter: Chapter | null) => void;
+  onSave: (data: {
+    title_en: string;
+    title_np: string;
+    content_en: string;
+    content_np: string;
+  }) => Promise<void>;
+  onCancel: () => void;
+}) {
+  return (
+    <div>
+      {isCreating && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-sm">
+            <div className="px-6 py-4 border-b border-slate-700 bg-slate-900">
+              <h2 className="text-lg font-semibold text-white">Select Chapter</h2>
+            </div>
+            <div className="p-6 max-h-96 overflow-y-auto">
+              <p className="text-sm text-gray-400 mb-4">Choose chapter to add note to:</p>
+              <div className="space-y-2">
+                {chapters.length === 0 ? (
+                  <p className="text-gray-500 text-sm">No chapters available. Create chapters first.</p>
+                ) : (
+                  chapters.map(chapter => (
+                    <button
+                      key={chapter.id}
+                      onClick={() => onChapterChange(chapter)}
+                      className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                        selectedChapter?.id === chapter.id
+                          ? 'bg-amber-600/20 border-amber-600/50 text-amber-400 font-medium'
+                          : 'border-slate-700 text-gray-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      <div className="font-medium">Ch {chapter.order}: {chapter.title_en}</div>
+                      <div className="text-xs text-gray-400 mt-1">{chapter.subject.name_en} - Year {chapter.subject.year.year}</div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+            <div className="flex gap-3 px-6 py-4 border-t border-slate-700 bg-slate-900">
+              <button
+                onClick={onCancel}
+                className="flex-1 px-4 py-2 rounded-lg border border-slate-600 text-gray-300 hover:text-white font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => selectedChapter && onCancel()}
+                disabled={!selectedChapter}
+                className="flex-1 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium transition-colors disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedChapter && (
+        <AdminNoteEditor
+          initialData={initialData}
+          onSave={onSave}
+          onCancel={onCancel}
         />
       )}
     </div>
