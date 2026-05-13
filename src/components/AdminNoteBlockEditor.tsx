@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Trash2, ChevronUp, ChevronDown, Save, X } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Plus, Trash2, ChevronUp, ChevronDown, Save, X, Bold, Italic } from 'lucide-react';
+import { insertMarkdown } from '@/lib/markdown';
 
 export interface NoteBlock {
   id: string;
@@ -33,6 +34,7 @@ export default function AdminNoteBlockEditor({
   const [title_np, setTitle_np] = useState(noteTitle_np);
   const [isSavingLocal, setIsSavingLocal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const textareaRefs = useRef<{ [key: string]: { en?: HTMLTextAreaElement; np?: HTMLTextAreaElement } }>({});
 
   const addBlock = (type: NoteBlock['type']) => {
     const newBlock: NoteBlock = {
@@ -64,6 +66,24 @@ export default function AdminNoteBlockEditor({
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     [newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]];
     setBlocks(newBlocks);
+  };
+
+  const applyFormatting = (blockId: string, lang: 'en' | 'np', format: 'bold' | 'italic') => {
+    const textarea = textareaRefs.current[blockId]?.[lang];
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = lang === 'en' ? blocks.find(b => b.id === blockId)?.content_en || '' : blocks.find(b => b.id === blockId)?.content_np || '';
+
+    const newText = insertMarkdown(text, start, end, format);
+    updateBlock(blockId, lang === 'en' ? 'content_en' : 'content_np', newText);
+
+    setTimeout(() => {
+      textarea.focus();
+      const markerLen = format === 'bold' ? 2 : 1;
+      textarea.setSelectionRange(start + markerLen, end + markerLen);
+    }, 0);
   };
 
   const handleSave = async () => {
@@ -224,7 +244,33 @@ export default function AdminNoteBlockEditor({
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">English</label>
+                        <div className="flex gap-1 mb-2">
+                          <button
+                            type="button"
+                            onClick={() => applyFormatting(block.id, 'en', 'bold')}
+                            disabled={isSavingLocal || isSaving}
+                            className="p-2 rounded bg-slate-600 hover:bg-slate-500 text-white disabled:opacity-50 text-xs flex items-center gap-1"
+                            title="Bold (wrap with **)"
+                          >
+                            <Bold className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyFormatting(block.id, 'en', 'italic')}
+                            disabled={isSavingLocal || isSaving}
+                            className="p-2 rounded bg-slate-600 hover:bg-slate-500 text-white disabled:opacity-50 text-xs flex items-center gap-1"
+                            title="Italic (wrap with *)"
+                          >
+                            <Italic className="w-3 h-3" />
+                          </button>
+                        </div>
                         <textarea
+                          ref={(el) => {
+                            if (el) {
+                              if (!textareaRefs.current[block.id]) textareaRefs.current[block.id] = {};
+                              textareaRefs.current[block.id].en = el;
+                            }
+                          }}
                           value={block.content_en}
                           onChange={(e) => updateBlock(block.id, 'content_en', e.target.value)}
                           disabled={isSavingLocal || isSaving}
@@ -235,7 +281,33 @@ export default function AdminNoteBlockEditor({
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">नेपाली</label>
+                        <div className="flex gap-1 mb-2">
+                          <button
+                            type="button"
+                            onClick={() => applyFormatting(block.id, 'np', 'bold')}
+                            disabled={isSavingLocal || isSaving}
+                            className="p-2 rounded bg-slate-600 hover:bg-slate-500 text-white disabled:opacity-50 text-xs flex items-center gap-1"
+                            title="Bold (wrap with **)"
+                          >
+                            <Bold className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyFormatting(block.id, 'np', 'italic')}
+                            disabled={isSavingLocal || isSaving}
+                            className="p-2 rounded bg-slate-600 hover:bg-slate-500 text-white disabled:opacity-50 text-xs flex items-center gap-1"
+                            title="Italic (wrap with *)"
+                          >
+                            <Italic className="w-3 h-3" />
+                          </button>
+                        </div>
                         <textarea
+                          ref={(el) => {
+                            if (el) {
+                              if (!textareaRefs.current[block.id]) textareaRefs.current[block.id] = {};
+                              textareaRefs.current[block.id].np = el;
+                            }
+                          }}
                           value={block.content_np}
                           onChange={(e) => updateBlock(block.id, 'content_np', e.target.value)}
                           disabled={isSavingLocal || isSaving}

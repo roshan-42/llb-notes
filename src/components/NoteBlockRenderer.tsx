@@ -1,3 +1,7 @@
+'use client';
+
+import { parseMarkdown } from '@/lib/markdown';
+
 interface NoteBlock {
   id: string;
   type: 'heading' | 'subheading' | 'body' | 'image';
@@ -70,7 +74,7 @@ export default function NoteBlockRenderer({
           default:
             return (
               <p key={block.id} className="text-gray-300 leading-relaxed whitespace-pre-wrap">
-                {text}
+                {parseMarkdown(text)}
               </p>
             );
         }

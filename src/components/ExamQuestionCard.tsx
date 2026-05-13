@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { parseMarkdown } from '@/lib/markdown';
 
 interface ExamQuestionCardProps {
   question_en: string;
@@ -69,7 +70,7 @@ export default function ExamQuestionCard({
           <p className={`text-gray-200 leading-relaxed ${
             language === 'np' ? 'text-lg' : 'text-base'
           }`}>
-            {answer}
+            {parseMarkdown(answer)}
           </p>
         </div>
       )}

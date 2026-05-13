@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Save, X, Trash2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Save, X, Trash2, Bold, Italic } from 'lucide-react';
+import { insertMarkdown } from '@/lib/markdown';
 
 interface Question {
   id: number;
@@ -35,6 +36,30 @@ export default function QuestionEditor({
   const [type, setType] = useState<'past' | 'possible'>(question?.type || 'past');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const answerEnRef = useRef<HTMLTextAreaElement>(null);
+  const answerNpRef = useRef<HTMLTextAreaElement>(null);
+
+  const applyFormatting = (lang: 'en' | 'np', format: 'bold' | 'italic') => {
+    const textarea = lang === 'en' ? answerEnRef.current : answerNpRef.current;
+    const text = lang === 'en' ? answerEn : answerNp;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newText = insertMarkdown(text, start, end, format);
+
+    if (lang === 'en') {
+      setAnswerEn(newText);
+    } else {
+      setAnswerNp(newText);
+    }
+
+    setTimeout(() => {
+      textarea.focus();
+      const markerLen = format === 'bold' ? 2 : 1;
+      textarea.setSelectionRange(start + markerLen, end + markerLen);
+    }, 0);
+  };
 
   const handleSave = async () => {
     if (!questionEn.trim() || !questionNp.trim() || !answerEn.trim() || !answerNp.trim()) {
@@ -160,7 +185,28 @@ export default function QuestionEditor({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">English</label>
+                <div className="flex gap-1 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => applyFormatting('en', 'bold')}
+                    disabled={isSaving}
+                    className="p-2 rounded bg-slate-600 hover:bg-slate-500 text-white disabled:opacity-50 text-xs flex items-center gap-1"
+                    title="Bold (wrap with **)"
+                  >
+                    <Bold className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyFormatting('en', 'italic')}
+                    disabled={isSaving}
+                    className="p-2 rounded bg-slate-600 hover:bg-slate-500 text-white disabled:opacity-50 text-xs flex items-center gap-1"
+                    title="Italic (wrap with *)"
+                  >
+                    <Italic className="w-3 h-3" />
+                  </button>
+                </div>
                 <textarea
+                  ref={answerEnRef}
                   value={answerEn}
                   onChange={(e) => setAnswerEn(e.target.value)}
                   disabled={isSaving}
@@ -171,7 +217,28 @@ export default function QuestionEditor({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">नेपाली</label>
+                <div className="flex gap-1 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => applyFormatting('np', 'bold')}
+                    disabled={isSaving}
+                    className="p-2 rounded bg-slate-600 hover:bg-slate-500 text-white disabled:opacity-50 text-xs flex items-center gap-1"
+                    title="Bold (wrap with **)"
+                  >
+                    <Bold className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyFormatting('np', 'italic')}
+                    disabled={isSaving}
+                    className="p-2 rounded bg-slate-600 hover:bg-slate-500 text-white disabled:opacity-50 text-xs flex items-center gap-1"
+                    title="Italic (wrap with *)"
+                  >
+                    <Italic className="w-3 h-3" />
+                  </button>
+                </div>
                 <textarea
+                  ref={answerNpRef}
                   value={answerNp}
                   onChange={(e) => setAnswerNp(e.target.value)}
                   disabled={isSaving}
