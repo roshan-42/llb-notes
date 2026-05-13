@@ -71,10 +71,7 @@ export default function HierarchicalAdmin() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const [loadingFaculty, setLoadingFaculty] = useState<number | null>(null);
-  const [loadingYear, setLoadingYear] = useState<number | null>(null);
-  const [loadingSubject, setLoadingSubject] = useState<number | null>(null);
-  const [contentReady, setContentReady] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     fetchFaculties();
@@ -186,22 +183,23 @@ export default function HierarchicalAdmin() {
             <div key={faculty.id}>
               <button
                 onClick={() => {
-                  setLoadingFaculty(faculty.id);
+                  if (isTransitioning) return;
+                  setIsTransitioning(true);
                   setSelectedFaculty(faculty);
                   setSelectedYear(null);
                   setSelectedSubject(null);
                   setSelectedChapter(null);
                   toggleExpand(`faculty-${faculty.id}`);
-                  setTimeout(() => setLoadingFaculty(null), 300);
+                  setTimeout(() => setIsTransitioning(false), 500);
                 }}
-                disabled={loadingFaculty === faculty.id}
+                disabled={isTransitioning}
                 className={`w-full text-left px-4 py-2 rounded flex items-center gap-2 transition-colors ${
                   selectedFaculty?.id === faculty.id
                     ? 'bg-amber-600/20 text-amber-400 font-semibold'
                     : 'text-gray-300 hover:bg-slate-800'
-                } disabled:opacity-70`}
+                } disabled:opacity-70 disabled:cursor-not-allowed`}
               >
-                {loadingFaculty === faculty.id ? (
+                {isTransitioning && selectedFaculty?.id === faculty.id ? (
                   <Loader className="w-4 h-4 animate-spin" />
                 ) : isExpanded(`faculty-${faculty.id}`) ? (
                   <ChevronDown className="w-4 h-4" />
@@ -218,21 +216,22 @@ export default function HierarchicalAdmin() {
                     <div key={year.id}>
                       <button
                         onClick={() => {
-                          setLoadingYear(year.id);
+                          if (isTransitioning) return;
+                          setIsTransitioning(true);
                           setSelectedYear(year);
                           setSelectedSubject(null);
                           setSelectedChapter(null);
                           toggleExpand(`year-${year.id}`);
-                          setTimeout(() => setLoadingYear(null), 300);
+                          setTimeout(() => setIsTransitioning(false), 500);
                         }}
-                        disabled={loadingYear === year.id}
+                        disabled={isTransitioning}
                         className={`w-full text-left px-4 py-1.5 rounded text-sm transition-colors flex items-center gap-2 ${
                           selectedYear?.id === year.id
                             ? 'bg-blue-600/20 text-blue-300'
                             : 'text-gray-400 hover:bg-slate-800'
-                        } disabled:opacity-70`}
+                        } disabled:opacity-70 disabled:cursor-not-allowed`}
                       >
-                        {loadingYear === year.id ? (
+                        {isTransitioning && selectedYear?.id === year.id ? (
                           <Loader className="w-3 h-3 animate-spin" />
                         ) : isExpanded(`year-${year.id}`) ? (
                           <ChevronDown className="w-3 h-3" />
@@ -248,19 +247,20 @@ export default function HierarchicalAdmin() {
                             <button
                               key={subject.id}
                               onClick={() => {
-                                setLoadingSubject(subject.id);
+                                if (isTransitioning) return;
+                                setIsTransitioning(true);
                                 setSelectedSubject(subject);
                                 setSelectedChapter(null);
-                                setTimeout(() => setLoadingSubject(null), 300);
+                                setTimeout(() => setIsTransitioning(false), 500);
                               }}
-                              disabled={loadingSubject === subject.id}
+                              disabled={isTransitioning}
                               className={`w-full text-left px-3 py-1 rounded text-xs transition-colors block truncate flex items-center gap-1 ${
                                 selectedSubject?.id === subject.id
                                   ? 'bg-purple-600/20 text-purple-300'
                                   : 'text-gray-500 hover:bg-slate-800'
-                              } disabled:opacity-70`}
+                              } disabled:opacity-70 disabled:cursor-not-allowed`}
                             >
-                              {loadingSubject === subject.id && (
+                              {isTransitioning && selectedSubject?.id === subject.id && (
                                 <Loader className="w-3 h-3 animate-spin flex-shrink-0" />
                               )}
                               <span className="truncate">{subject.name_en}</span>
@@ -304,28 +304,12 @@ export default function HierarchicalAdmin() {
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-6 relative">
-          {!contentReady && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded">
-              <div className="flex items-center gap-2 text-gray-400">
-                <Loader className="w-4 h-4 animate-spin" />
-                <span className="text-sm">Loading...</span>
-              </div>
-            </div>
-          )}
           {!selectedFaculty ? (
             <div className="text-center text-gray-400">Select faculty from left sidebar</div>
           ) : !selectedYear ? (
-            <YearManager faculty={selectedFaculty} onYearSelect={(year) => {
-              setContentReady(false);
-              setSelectedYear(year);
-              setTimeout(() => setContentReady(true), 200);
-            }} onRefresh={refetchAndMaintainState} />
+            <YearManager faculty={selectedFaculty} onYearSelect={setSelectedYear} onRefresh={refetchAndMaintainState} />
           ) : !selectedSubject ? (
-            <SubjectManager year={selectedYear} onSubjectSelect={(subject) => {
-              setContentReady(false);
-              setSelectedSubject(subject);
-              setTimeout(() => setContentReady(true), 200);
-            }} onRefresh={refetchAndMaintainState} />
+            <SubjectManager year={selectedYear} onSubjectSelect={setSelectedSubject} onRefresh={refetchAndMaintainState} />
           ) : !selectedChapter ? (
             <div className="space-y-4">
               <div className="flex gap-2 border-b border-slate-700 pb-4">

@@ -1,35 +1,63 @@
-import { prisma } from '@/lib/prisma';
-import Link from 'next/link';
-import { ArrowLeft, BookMarked } from 'lucide-react';
-import { notFound } from 'next/navigation';
+'use client';
 
-export default async function YearPage({
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import LoadingLink from '@/components/LoadingLink';
+import { ArrowLeft, BookMarked, Loader } from 'lucide-react';
+
+interface Subject {
+  id: number;
+  name_en: string;
+  name_np: string;
+  slug: string;
+  icon?: string;
+}
+
+interface YearData {
+  subjects: Subject[];
+}
+
+export default function YearPage({
   params
 }: {
   params: Promise<{ year: string }>;
 }) {
-  const { year: yearStr } = await params;
-  const yearNum = parseInt(yearStr);
+  const [paramsData, setParamsData] = useState<{ year: string } | null>(null);
+  const [yearData, setYearData] = useState<YearData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (isNaN(yearNum) || yearNum < 1 || yearNum > 3) {
-    notFound();
-  }
+  useEffect(() => {
+    params.then(setParamsData);
+  }, [params]);
 
-  const yearData = await prisma.year.findFirst({
-    where: {
-      year: yearNum,
-      faculty: { slug: 'llb' }
-    },
-    include: {
-      subjects: {
-        orderBy: { slug: 'asc' }
+  useEffect(() => {
+    if (!paramsData) return;
+
+    const fetchYearData = async () => {
+      try {
+        const yearNum = parseInt(paramsData.year);
+        const res = await fetch(`/api/years/${yearNum}`);
+        const data = await res.json();
+        setYearData(data);
+      } catch (error) {
+        console.error('Error fetching year data:', error);
+      } finally {
+        setIsLoading(false);
       }
-    }
-  });
+    };
 
-  if (!yearData) {
-    notFound();
+    fetchYearData();
+  }, [paramsData]);
+
+  if (isLoading || !paramsData || !yearData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    );
   }
+
+  const yearNum = parseInt(paramsData.year);
 
   const yearDescriptions: Record<number, string> = {
     1: 'Foundation & Legal Theory',
@@ -66,10 +94,10 @@ export default async function YearPage({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {yearData.subjects.map(subject => (
-              <Link
+              <LoadingLink
                 key={subject.id}
                 href={`/year/${yearNum}/subject/${subject.slug}`}
-                className="group relative overflow-hidden rounded-lg border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 p-6 hover:border-amber-600/50 transition-all hover:shadow-xl hover:shadow-amber-600/10"
+                className="group relative overflow-hidden rounded-lg border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 p-6 hover:border-amber-600/50 transition-all hover:shadow-xl hover:shadow-amber-600/10 disabled:opacity-70 disabled:cursor-not-allowed text-left h-full"
               >
                 {/* Background accent */}
                 <div className="absolute top-0 right-0 w-20 h-20 bg-amber-600/10 rounded-full blur-3xl group-hover:bg-amber-600/20 transition-colors" />
@@ -87,15 +115,11 @@ export default async function YearPage({
                     <span>→</span>
                   </div>
                 </div>
-              </Link>
+              </LoadingLink>
             ))}
           </div>
         )}
       </div>
     </div>
   );
-}
-
-export async function generateStaticParams() {
-  return [{ year: '1' }, { year: '2' }, { year: '3' }];
 }

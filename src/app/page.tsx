@@ -1,4 +1,7 @@
+'use client';
+
 import Link from "next/link";
+import LoadingLink from "@/components/LoadingLink";
 import { BookOpen, BarChart3, Users } from "lucide-react";
 
 export default function Home() {
@@ -40,10 +43,10 @@ export default function Home() {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[1, 2, 3].map((year) => (
-            <Link
+            <LoadingLink
               key={year}
               href={`/year/${year}`}
-              className="group relative overflow-hidden rounded-lg border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-800 p-8 hover:border-amber-600/50 transition-all hover:shadow-xl hover:shadow-amber-600/10"
+              className="group relative overflow-hidden rounded-lg border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-800 p-8 hover:border-amber-600/50 transition-all hover:shadow-xl hover:shadow-amber-600/10 disabled:opacity-70 disabled:cursor-not-allowed text-left h-full"
             >
               {/* Background accent */}
               <div className="absolute top-0 right-0 w-24 h-24 bg-amber-600/10 rounded-full blur-3xl group-hover:bg-amber-600/20 transition-colors" />
@@ -65,7 +68,7 @@ export default function Home() {
                   <span>→</span>
                 </div>
               </div>
-            </Link>
+            </LoadingLink>
           ))}
         </div>
       </div>

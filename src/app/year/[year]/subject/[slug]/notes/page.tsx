@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { prisma } from '@/lib/prisma';
 import DualLanguageToggle from '@/components/DualLanguageToggle';
 import NoteBlockRenderer from '@/components/NoteBlockRenderer';
-import { ArrowLeft, ChevronDown, ChevronUp, Menu, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Menu, X, Loader } from 'lucide-react';
 import Link from 'next/link';
 
 interface Chapter {
@@ -38,6 +38,7 @@ export default function NotesPage({ params }: NotesPageProps) {
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     params.then(setParamsData);
@@ -121,32 +122,40 @@ export default function NotesPage({ params }: NotesPageProps) {
             <div key={chapter.id}>
               <button
                 onClick={() => {
+                  if (isTransitioning) return;
+                  setIsTransitioning(true);
                   setSelectedChapter(chapter);
                   setExpandedChapters(new Set([...expandedChapters, chapter.id]));
                   setSidebarOpen(false);
+                  setTimeout(() => setIsTransitioning(false), 500);
                 }}
+                disabled={isTransitioning}
                 className={`w-full text-left px-4 py-3 rounded-lg transition-colors border ${
                   selectedChapter?.id === chapter.id
                     ? 'bg-amber-600/20 border-amber-600/50 text-amber-400 font-semibold'
                     : 'border-slate-700 text-gray-300 hover:bg-slate-800'
-                }`}
+                } disabled:opacity-70 disabled:cursor-not-allowed`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm">
                     <span className="font-medium">Ch {chapter.order}:</span> {chapter.title_en}
                   </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleChapter(chapter.id);
-                    }}
-                  >
-                    {expandedChapters.has(chapter.id) ? (
-                      <ChevronUp className="w-4 h-4" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4" />
-                    )}
-                  </button>
+                  {isTransitioning && selectedChapter?.id === chapter.id ? (
+                    <Loader className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleChapter(chapter.id);
+                      }}
+                    >
+                      {expandedChapters.has(chapter.id) ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
                 </div>
               </button>
 
