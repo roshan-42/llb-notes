@@ -6,6 +6,7 @@ import Link from 'next/link';
 import AdminNoteBlockEditor from './AdminNoteBlockEditor';
 import QuestionEditor from './QuestionEditor';
 import { useFaculties, type Faculty, type Year, type Subject, type Chapter, type Note, type Question } from '@/lib/hooks/useFaculties';
+import { useNote } from '@/lib/hooks/useNote';
 import { useQueryClient } from '@tanstack/react-query';
 
 type NavigationLevel = 'faculties' | 'years' | 'subjects' | 'chapters' | 'content';
@@ -687,11 +688,14 @@ function NoteEditor({ chapter, onRefresh }: { chapter: Chapter; onRefresh: () =>
     }
   };
 
+  // Fetch full note content when editing (for existing notes)
+  const { data: fullNote } = useNote(isEditing && selectedNote && selectedNote.id !== 0 ? selectedNote.id : undefined);
+
   if (isEditing && selectedNote) {
     return (
       <AdminNoteBlockEditor
-        initialContent_en={selectedNote.content_en || ''}
-        initialContent_np={selectedNote.content_np || ''}
+        initialContent_en={fullNote?.content_en || selectedNote.content_en || ''}
+        initialContent_np={fullNote?.content_np || selectedNote.content_np || ''}
         noteTitle_en={selectedNote.title_en}
         noteTitle_np={selectedNote.title_np}
         onSave={handleSaveNote}

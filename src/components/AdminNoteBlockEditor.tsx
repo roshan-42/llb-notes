@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, X, ArrowLeft } from 'lucide-react';
 import RichTextEditor from './RichTextEditor';
 
@@ -29,6 +29,13 @@ export default function AdminNoteBlockEditor({
   const [title_np, setTitle_np] = useState(noteTitle_np);
   const [isSavingLocal, setIsSavingLocal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setContent_en(initialContent_en);
+    setContent_np(initialContent_np);
+    setTitle_en(noteTitle_en);
+    setTitle_np(noteTitle_np);
+  }, [initialContent_en, initialContent_np, noteTitle_en, noteTitle_np]);
 
   const handleSave = async () => {
     if (!title_en.trim() || !title_np.trim()) {

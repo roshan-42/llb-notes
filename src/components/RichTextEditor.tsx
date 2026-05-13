@@ -50,7 +50,7 @@ export default function RichTextEditor({
   });
 
   useEffect(() => {
-    if (editor && value && value !== editor.getHTML()) {
+    if (editor && value !== editor.getHTML()) {
       editor.commands.setContent(value);
     }
   }, [value, editor]);
