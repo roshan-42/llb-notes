@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface ExamQuestionCardProps {
   question_en: string;
@@ -24,57 +24,48 @@ export default function ExamQuestionCard({
 
   const question = language === 'en' ? question_en : question_np;
   const answer = language === 'en' ? answer_en : answer_np;
-  const typeLabel = type === 'past' ? 'Past Question' : 'Possible Question';
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden hover:border-amber-600/40 transition-colors">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 border-b border-slate-700">
-        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-          type === 'past'
-            ? 'bg-amber-600/20 text-amber-400 border border-amber-600/30'
-            : 'bg-slate-600/50 text-slate-300 border border-slate-600'
-        }`}>
-          {typeLabel}
-        </span>
+    <div className="bg-slate-800 border border-slate-700 rounded-lg px-6 py-4 hover:border-amber-600/40 transition-colors">
+      {/* Top row: Question + Type badge + Eye icon */}
+      <div className="flex items-start justify-between gap-4 mb-2">
+        <div className="flex-1 min-w-0">
+          {/* Question */}
+          <p className={`text-sm font-medium text-gray-300 ${
+            language === 'np' ? 'text-lg leading-relaxed' : ''
+          }`}>
+            {question}
+          </p>
+        </div>
+
+        <div className="flex-shrink-0 flex items-center gap-2">
+          {/* Type badge */}
+          <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${
+            type === 'past'
+              ? 'bg-amber-600/20 text-amber-400'
+              : 'bg-slate-600/50 text-slate-300'
+          }`}>
+            {type === 'past' ? 'Past' : 'Possible'}
+          </span>
+
+          {/* Eye icon */}
+          <button
+            onClick={() => setShowAnswer(!showAnswer)}
+            className="p-1.5 rounded hover:bg-slate-700 transition-colors text-gray-400 hover:text-amber-400"
+            aria-label={showAnswer ? 'Hide answer' : 'Show answer'}
+          >
+            {showAnswer ? (
+              <Eye className="w-5 h-5" />
+            ) : (
+              <EyeOff className="w-5 h-5" />
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Question */}
-      <div className="px-6 py-4">
-        <p className={`text-sm font-medium text-gray-300 mb-3 ${
-          language === 'np' ? 'text-lg leading-relaxed' : ''
-        }`}>
-          {question}
-        </p>
-
-        {/* Toggle Button */}
-        <button
-          onClick={() => setShowAnswer(!showAnswer)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-amber-600/10 hover:bg-amber-600/20 border border-amber-600/30 hover:border-amber-600/50 text-amber-400 font-medium transition-all duration-200"
-          aria-expanded={showAnswer}
-        >
-          {showAnswer ? (
-            <>
-              <ChevronUp className="w-4 h-4" />
-              Hide Answer
-            </>
-          ) : (
-            <>
-              <ChevronDown className="w-4 h-4" />
-              Show Answer
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Answer (Collapsible) */}
+      {/* Answer (inline) */}
       {showAnswer && (
-        <div className="border-t border-slate-700 bg-slate-900/50 px-6 py-4">
-          <div className="mb-2">
-            <span className="text-xs uppercase tracking-widest text-amber-500 font-semibold">
-              Answer
-            </span>
-          </div>
+        <div className="mt-3 pt-3 border-t border-slate-700">
           <p className={`text-gray-200 leading-relaxed ${
             language === 'np' ? 'text-lg' : 'text-base'
           }`}>
