@@ -5,112 +5,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
-import { Extension } from '@tiptap/core';
-import { Plugin } from '@tiptap/pm/state';
-import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Heading2, Undo2, Redo2, Code } from 'lucide-react';
-
-// HTML Paste handler to preserve formatting from Word/Google Docs
-const HtmlPaste = Extension.create({
-  name: 'htmlPaste',
-  addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        props: {
-          clipboardTextSerializer: () => '',
-          handleDOMEvents: {
-            paste(view, event) {
-              if (!event.clipboardData) return false;
-
-              const html = event.clipboardData.getData('text/html');
-              if (!html) return false;
-
-              const parser = new DOMParser();
-              const doc = parser.parseFromString(html, 'text/html');
-
-              // Get all text content preserving structure
-              const nodes: any[] = [];
-              const processNode = (node: Node) => {
-                if (node.nodeType === Node.TEXT_NODE) {
-                  const text = node.textContent;
-                  if (text) {
-                    nodes.push({ type: 'text', content: text });
-                  }
-                } else if (node.nodeType === Node.ELEMENT_NODE) {
-                  const element = node as HTMLElement;
-                  const tagName = element.tagName.toLowerCase();
-
-                  if (['b', 'strong'].includes(tagName)) {
-                    nodes.push({ type: 'bold_start' });
-                    Array.from(element.childNodes).forEach(processNode);
-                    nodes.push({ type: 'bold_end' });
-                  } else if (['i', 'em'].includes(tagName)) {
-                    nodes.push({ type: 'italic_start' });
-                    Array.from(element.childNodes).forEach(processNode);
-                    nodes.push({ type: 'italic_end' });
-                  } else if (['u'].includes(tagName)) {
-                    nodes.push({ type: 'underline_start' });
-                    Array.from(element.childNodes).forEach(processNode);
-                    nodes.push({ type: 'underline_end' });
-                  } else if (['p', 'div', 'span'].includes(tagName)) {
-                    Array.from(element.childNodes).forEach(processNode);
-                  } else {
-                    Array.from(element.childNodes).forEach(processNode);
-                  }
-                }
-              };
-
-              Array.from(doc.body.childNodes).forEach(processNode);
-
-              // Convert parsed nodes to editor content
-              let text = '';
-              let marks: any[] = [];
-
-              for (const node of nodes) {
-                if (node.type === 'text') {
-                  text += node.content;
-                } else if (node.type === 'bold_start') {
-                  marks.push({ type: 'bold', from: text.length });
-                } else if (node.type === 'bold_end') {
-                  const boldMark = marks.find(m => m.type === 'bold' && !m.to);
-                  if (boldMark) boldMark.to = text.length;
-                } else if (node.type === 'italic_start') {
-                  marks.push({ type: 'italic', from: text.length });
-                } else if (node.type === 'italic_end') {
-                  const italicMark = marks.find(m => m.type === 'italic' && !m.to);
-                  if (italicMark) italicMark.to = text.length;
-                } else if (node.type === 'underline_start') {
-                  marks.push({ type: 'underline', from: text.length });
-                } else if (node.type === 'underline_end') {
-                  const underlineMark = marks.find(m => m.type === 'underline' && !m.to);
-                  if (underlineMark) underlineMark.to = text.length;
-                }
-              }
-
-              // Insert content with marks
-              const { state, dispatch } = view;
-              const { from, to } = state.selection;
-              const tr = state.tr.replaceWith(from, to, state.schema.text(text));
-
-              // Apply marks
-              for (const mark of marks) {
-                if (mark.to) {
-                  const markType = state.schema.marks[mark.type];
-                  if (markType) {
-                    tr.addMark(from + mark.from, from + mark.to, markType.create());
-                  }
-                }
-              }
-
-              dispatch(tr);
-              event.preventDefault();
-              return true;
-            }
-          }
-        }
-      })
-    ];
-  }
-});
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Undo2, Redo2, Code } from 'lucide-react';
 
 interface RichTextEditorProps {
   value: string;
@@ -129,48 +24,29 @@ export default function RichTextEditor({
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
-      HtmlPaste,
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3]
-        },
-        paragraph: {
-          HTMLAttributes: {
-            class: 'paragraph'
-          }
         }
       }),
-      Underline.configure({
-        HTMLAttributes: {
-          class: 'underline'
-        }
-      }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'link'
-        }
-      })
+      Underline
     ],
-    content: value || '',
+    content: value,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
     editable: !disabled,
-    immediatelyRender: false,
-    parseOptions: {
-      preserveWhitespace: 'full'
-    }
+    immediatelyRender: false
   });
 
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value || '');
+    if (editor && value && value !== editor.getHTML()) {
+      editor.commands.setContent(value);
     }
-  }, [editor, value]);
+  }, [value, editor]);
 
   if (!editor) {
-    return null;
+    return <div style={{ minHeight: `${minHeight}px` }} className="bg-slate-700 border border-slate-600 rounded-lg animate-pulse" />;
   }
 
   const toggleBold = () => editor.chain().focus().toggleBold().run();
@@ -182,14 +58,13 @@ export default function RichTextEditor({
   const undo = () => editor.chain().focus().undo().run();
   const redo = () => editor.chain().focus().redo().run();
 
-  const buttonClass = (isActive: boolean) => `
-    p-2 rounded text-white transition-colors text-xs
-    ${isActive ? 'bg-blue-600 hover:bg-blue-500' : 'bg-slate-600 hover:bg-slate-500'}
-    disabled:opacity-50
-  `;
+  const buttonClass = (isActive: boolean) =>
+    `p-2 rounded text-white transition-colors text-xs ${
+      isActive ? 'bg-blue-600 hover:bg-blue-500' : 'bg-slate-600 hover:bg-slate-500'
+    } disabled:opacity-50`;
 
   return (
-    <div className="border border-slate-600 rounded-lg overflow-hidden bg-slate-700">
+    <div className="flex flex-col border border-slate-600 rounded-lg overflow-hidden bg-slate-700">
       {/* Toolbar */}
       <div className="bg-slate-800 border-b border-slate-600 p-2 flex flex-wrap gap-1">
         <button
@@ -197,7 +72,7 @@ export default function RichTextEditor({
           onClick={toggleBold}
           disabled={disabled}
           className={buttonClass(editor.isActive('bold'))}
-          title="Bold (Ctrl+B)"
+          title="Bold"
         >
           <Bold className="w-4 h-4" />
         </button>
@@ -206,7 +81,7 @@ export default function RichTextEditor({
           onClick={toggleItalic}
           disabled={disabled}
           className={buttonClass(editor.isActive('italic'))}
-          title="Italic (Ctrl+I)"
+          title="Italic"
         >
           <Italic className="w-4 h-4" />
         </button>
@@ -215,7 +90,7 @@ export default function RichTextEditor({
           onClick={toggleUnderline}
           disabled={disabled}
           className={buttonClass(editor.isActive('underline'))}
-          title="Underline (Ctrl+U)"
+          title="Underline"
         >
           <UnderlineIcon className="w-4 h-4" />
         </button>
@@ -248,7 +123,7 @@ export default function RichTextEditor({
           onClick={toggleCodeBlock}
           disabled={disabled}
           className={buttonClass(editor.isActive('codeBlock'))}
-          title="Code Block"
+          title="Code"
         >
           <Code className="w-4 h-4" />
         </button>
@@ -275,17 +150,37 @@ export default function RichTextEditor({
         </button>
       </div>
 
-      {/* Editor */}
+      {/* Editor Content Area */}
       <div
         style={{ minHeight: `${minHeight}px` }}
-        className="w-full px-4 py-3 text-white bg-slate-700 [&_p]:text-white [&_p]:my-1 [&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-white [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-white [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-white [&_strong]:font-bold [&_em]:italic [&_u]:underline [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:ml-2 [&_code]:bg-slate-900 [&_code]:px-1 [&_code]:rounded [&_code]:text-red-400 [&_code]:text-sm [&_pre]:bg-slate-900 [&_pre]:p-3 [&_pre]:rounded [&_pre]:overflow-x-auto [&_a]:text-blue-400 [&_a]:underline"
+        className="flex-1 overflow-auto bg-slate-700 px-4 py-3 text-base text-white"
       >
-        <EditorContent editor={editor} />
+        <EditorContent
+          editor={editor}
+          className="prose prose-invert max-w-none prose-sm
+            [&_.ProseMirror]:outline-none
+            [&_.ProseMirror]:text-base
+            [&_.ProseMirror]:text-white
+            [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-white [&_h1]:my-3
+            [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-white [&_h2]:my-2
+            [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-white [&_h3]:my-2
+            [&_p]:text-white [&_p]:my-2 [&_p]:leading-relaxed
+            [&_ul]:list-disc [&_ul]:ml-6 [&_ul]:my-2
+            [&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:my-2
+            [&_li]:text-white [&_li]:my-1
+            [&_strong]:font-bold [&_strong]:text-white
+            [&_em]:italic [&_em]:text-gray-200
+            [&_u]:underline [&_u]:underline-offset-2
+            [&_code]:bg-slate-900 [&_code]:px-2 [&_code]:py-1 [&_code]:rounded [&_code]:text-orange-400 [&_code]:text-sm
+            [&_pre]:bg-slate-900 [&_pre]:p-3 [&_pre]:rounded [&_pre]:overflow-x-auto [&_pre]:my-2
+            [&_blockquote]:border-l-4 [&_blockquote]:border-amber-600 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:my-2
+            [&_a]:text-blue-400 [&_a]:underline"
+        />
       </div>
 
-      {/* Hint */}
+      {/* Info */}
       <div className="bg-slate-800 border-t border-slate-600 px-4 py-2 text-xs text-gray-400">
-        Paste from Google Docs, Word, or other rich text editors - formatting will be preserved!
+        Paste from Google Docs, Word - formatting (bold, italic, lists, paragraphs) preserved
       </div>
     </div>
   );
