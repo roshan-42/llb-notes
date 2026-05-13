@@ -5,139 +5,62 @@ import { ArrowLeft, Plus, Trash2, Edit, ChevronDown, ChevronRight, AlertCircle, 
 import Link from 'next/link';
 import AdminNoteBlockEditor from './AdminNoteBlockEditor';
 import QuestionEditor from './QuestionEditor';
-
-interface Faculty {
-  id: number;
-  name: string;
-  slug: string;
-  years: Year[];
-}
-
-interface Year {
-  id: number;
-  year: number;
-  name: string;
-  facultyId: number;
-  subjects: Subject[];
-}
-
-interface Subject {
-  id: number;
-  name_en: string;
-  name_np: string;
-  slug: string;
-  yearId: number;
-  chapters: Chapter[];
-}
-
-interface Chapter {
-  id: number;
-  title_en: string;
-  title_np: string;
-  order: number;
-  subjectId: number;
-  notes: Note[];
-  questions: Question[];
-}
-
-interface Note {
-  id: number;
-  title_en: string;
-  title_np: string;
-  content_en: string;
-  content_np?: string;
-  chapterId: number;
-}
-
-interface Question {
-  id: number;
-  question_en: string;
-  question_np: string;
-  answer_en: string;
-  answer_np: string;
-  type: 'past' | 'possible';
-  chapterId: number;
-}
+import { useFaculties, type Faculty, type Year, type Subject, type Chapter, type Note, type Question } from '@/lib/hooks/useFaculties';
+import { useQueryClient } from '@tanstack/react-query';
 
 type NavigationLevel = 'faculties' | 'years' | 'subjects' | 'chapters' | 'content';
 
 export default function HierarchicalAdmin() {
-  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const queryClient = useQueryClient();
+  const { data: faculties = [], isLoading, error: fetchError } = useFaculties();
   const [selectedFaculty, setSelectedFaculty] = useState<Faculty | null>(null);
   const [selectedYear, setSelectedYear] = useState<Year | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [contentType, setContentType] = useState<'notes' | 'exams'>('notes');
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
-    fetchFaculties();
-  }, []);
-
-  const fetchFaculties = async () => {
-    try {
-      const res = await fetch('/api/admin/faculties');
-      const data = await res.json();
-      setFaculties(data);
-      if (data.length > 0 && !selectedFaculty) {
-        setSelectedFaculty(data[0]);
-      } else if (selectedFaculty) {
-        // Keep the selected faculty if it still exists
-        const found = data.find((f: Faculty) => f.id === selectedFaculty.id);
-        if (found) {
-          setSelectedFaculty(found);
-        } else if (data.length > 0) {
-          setSelectedFaculty(data[0]);
-        }
-      }
-    } catch (err) {
-      setError('Failed to load faculties');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
+    if (faculties.length > 0 && !selectedFaculty) {
+      setSelectedFaculty(faculties[0]);
     }
-  };
+  }, [faculties, selectedFaculty]);
 
   const refetchAndMaintainState = async () => {
-    try {
-      const res = await fetch('/api/admin/faculties');
-      const data: Faculty[] = await res.json();
-      setFaculties(data);
+    await queryClient.invalidateQueries({ queryKey: ['faculties'] });
 
-      // Try to keep current selections if they still exist
-      if (selectedFaculty) {
-        const foundFaculty = data.find((f: Faculty) => f.id === selectedFaculty.id);
-        if (foundFaculty) {
-          setSelectedFaculty(foundFaculty);
+    const data = queryClient.getQueryData<Faculty[]>(['faculties']) || faculties;
 
-          // Try to keep selected year
-          if (selectedYear) {
-            const foundYear = foundFaculty.years.find((y: Year) => y.id === selectedYear.id);
-            if (foundYear) {
-              setSelectedYear(foundYear);
+    // Try to keep current selections if they still exist
+    if (selectedFaculty) {
+      const foundFaculty = data.find((f: Faculty) => f.id === selectedFaculty.id);
+      if (foundFaculty) {
+        setSelectedFaculty(foundFaculty);
 
-              // Try to keep selected subject
-              if (selectedSubject) {
-                const foundSubject = foundYear.subjects.find((s: Subject) => s.id === selectedSubject.id);
-                setSelectedSubject(foundSubject || null);
-              }
-            } else {
-              setSelectedYear(null);
-              setSelectedSubject(null);
+        // Try to keep selected year
+        if (selectedYear) {
+          const foundYear = foundFaculty.years.find((y: Year) => y.id === selectedYear.id);
+          if (foundYear) {
+            setSelectedYear(foundYear);
+
+            // Try to keep selected subject
+            if (selectedSubject) {
+              const foundSubject = foundYear.subjects.find((s: Subject) => s.id === selectedSubject.id);
+              setSelectedSubject(foundSubject || null);
             }
+          } else {
+            setSelectedYear(null);
+            setSelectedSubject(null);
           }
-        } else {
-          setSelectedFaculty(data.length > 0 ? data[0] : null);
-          setSelectedYear(null);
-          setSelectedSubject(null);
-          setSelectedChapter(null);
         }
+      } else {
+        setSelectedFaculty(data.length > 0 ? data[0] : null);
+        setSelectedYear(null);
+        setSelectedSubject(null);
+        setSelectedChapter(null);
       }
-    } catch (err) {
-      console.error('Error refetching:', err);
     }
   };
 
@@ -153,10 +76,18 @@ export default function HierarchicalAdmin() {
 
   const isExpanded = (nodeId: string) => expandedNodes.has(nodeId);
 
-  if (isLoading) {
+  if (isLoading || faculties.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-400">Loading...</div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-400">Error loading faculties</div>
       </div>
     );
   }
@@ -724,7 +655,8 @@ function NoteEditor({ chapter, onRefresh }: { chapter: Chapter; onRefresh: () =>
       title_en: '',
       title_np: '',
       content_en: '',
-      chapterId: chapter.id
+      chapterId: chapter.id,
+      order: (chapter.notes?.length || 0) + 1
     });
     setIsEditing(true);
   };
@@ -933,7 +865,7 @@ function QuestionsList({ chapter, onRefresh }: { chapter: Chapter; onRefresh: ()
         </button>
         <QuestionEditor
           chapter={chapter}
-          question={selectedQuestion.id === 0 ? undefined : selectedQuestion}
+          question={selectedQuestion.id === 0 ? undefined : (selectedQuestion as any)}
           onSave={handleSaveQuestion}
           onCancel={() => {
             setIsEditing(false);

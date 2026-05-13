@@ -1,27 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { prisma } from '@/lib/prisma';
 import DualLanguageToggle from '@/components/DualLanguageToggle';
 import NoteBlockRenderer from '@/components/NoteBlockRenderer';
+import { useChapters, type Note } from '@/lib/hooks/useChapters';
 import { ArrowLeft, ChevronDown, ChevronUp, Menu, X, Loader } from 'lucide-react';
 import Link from 'next/link';
-
-interface Chapter {
-  id: number;
-  title_en: string;
-  title_np: string;
-  order: number;
-  notes: Note[];
-}
-
-interface Note {
-  id: number;
-  title_en: string;
-  title_np: string;
-  content_en: string;
-  content_np: string;
-}
 
 interface NotesPageProps {
   params: Promise<{
@@ -33,10 +17,8 @@ interface NotesPageProps {
 export default function NotesPage({ params }: NotesPageProps) {
   const [paramsData, setParamsData] = useState<{ year: string; slug: string } | null>(null);
   const [language, setLanguage] = useState<'en' | 'np'>('en');
-  const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<any | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set());
-  const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -44,27 +26,14 @@ export default function NotesPage({ params }: NotesPageProps) {
     params.then(setParamsData);
   }, [params]);
 
+  const { data: chapters = [], isLoading } = useChapters(paramsData?.slug || '');
+
   useEffect(() => {
-    if (!paramsData) return;
-
-    const fetchChapters = async () => {
-      try {
-        const res = await fetch(`/api/subjects/${paramsData.slug}/chapters`);
-        const data = await res.json();
-        setChapters(data);
-        if (data.length > 0) {
-          setSelectedChapter(data[0]);
-          setExpandedChapters(new Set([data[0].id]));
-        }
-      } catch (error) {
-        console.error('Error fetching chapters:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchChapters();
-  }, [paramsData]);
+    if (chapters.length > 0 && !selectedChapter) {
+      setSelectedChapter(chapters[0]);
+      setExpandedChapters(new Set([chapters[0].id]));
+    }
+  }, [chapters, selectedChapter]);
 
   const toggleChapter = (chapterId: number) => {
     const newExpanded = new Set(expandedChapters);
@@ -193,7 +162,7 @@ export default function NotesPage({ params }: NotesPageProps) {
 
             {/* Content */}
             <div className="p-4 lg:p-8 space-y-8">
-              {selectedChapter.notes.map(note => (
+              {selectedChapter.notes.map((note: Note) => (
                 <article
                   key={note.id}
                   className="bg-slate-800 border border-slate-700 rounded-lg p-8"

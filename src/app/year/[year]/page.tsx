@@ -3,19 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import LoadingLink from '@/components/LoadingLink';
-import { ArrowLeft, BookMarked, Loader } from 'lucide-react';
-
-interface Subject {
-  id: number;
-  name_en: string;
-  name_np: string;
-  slug: string;
-  icon?: string;
-}
-
-interface YearData {
-  subjects: Subject[];
-}
+import { useYearData } from '@/lib/hooks/useYearData';
+import { ArrowLeft, BookMarked } from 'lucide-react';
 
 export default function YearPage({
   params
@@ -23,31 +12,13 @@ export default function YearPage({
   params: Promise<{ year: string }>;
 }) {
   const [paramsData, setParamsData] = useState<{ year: string } | null>(null);
-  const [yearData, setYearData] = useState<YearData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     params.then(setParamsData);
   }, [params]);
 
-  useEffect(() => {
-    if (!paramsData) return;
-
-    const fetchYearData = async () => {
-      try {
-        const yearNum = parseInt(paramsData.year);
-        const res = await fetch(`/api/years/${yearNum}`);
-        const data = await res.json();
-        setYearData(data);
-      } catch (error) {
-        console.error('Error fetching year data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchYearData();
-  }, [paramsData]);
+  const yearNum = paramsData ? parseInt(paramsData.year) : 0;
+  const { data: yearData, isLoading } = useYearData(yearNum);
 
   if (isLoading || !paramsData || !yearData) {
     return (
@@ -56,8 +27,6 @@ export default function YearPage({
       </div>
     );
   }
-
-  const yearNum = parseInt(paramsData.year);
 
   const yearDescriptions: Record<number, string> = {
     1: 'Foundation & Legal Theory',

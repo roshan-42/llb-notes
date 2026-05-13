@@ -3,26 +3,9 @@
 import { useState, useEffect } from 'react';
 import DualLanguageToggle from '@/components/DualLanguageToggle';
 import ExamQuestionCard from '@/components/ExamQuestionCard';
+import { useChapters, type Question } from '@/lib/hooks/useChapters';
 import { ArrowLeft, Menu, X, ChevronDown, ChevronUp, Loader } from 'lucide-react';
 import Link from 'next/link';
-
-interface Chapter {
-  id: number;
-  title_en: string;
-  title_np: string;
-  order: number;
-  questions: Question[];
-}
-
-interface Question {
-  id: number;
-  chapterId: number;
-  question_en: string;
-  question_np: string;
-  answer_en: string;
-  answer_np: string;
-  type: 'past' | 'possible';
-}
 
 interface ExamsPageProps {
   params: Promise<{
@@ -34,10 +17,8 @@ interface ExamsPageProps {
 export default function ExamsPage({ params }: ExamsPageProps) {
   const [paramsData, setParamsData] = useState<{ year: string; slug: string } | null>(null);
   const [language, setLanguage] = useState<'en' | 'np'>('en');
-  const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<any | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set());
-  const [isLoading, setIsLoading] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'past' | 'possible'>('all');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -46,27 +27,14 @@ export default function ExamsPage({ params }: ExamsPageProps) {
     params.then(setParamsData);
   }, [params]);
 
+  const { data: chapters = [], isLoading } = useChapters(paramsData?.slug || '');
+
   useEffect(() => {
-    if (!paramsData) return;
-
-    const fetchChapters = async () => {
-      try {
-        const res = await fetch(`/api/subjects/${paramsData.slug}/chapters`);
-        const data = await res.json();
-        setChapters(data);
-        if (data.length > 0) {
-          setSelectedChapter(data[0]);
-          setExpandedChapters(new Set([data[0].id]));
-        }
-      } catch (error) {
-        console.error('Error fetching chapters:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchChapters();
-  }, [paramsData]);
+    if (chapters.length > 0 && !selectedChapter) {
+      setSelectedChapter(chapters[0]);
+      setExpandedChapters(new Set([chapters[0].id]));
+    }
+  }, [chapters, selectedChapter]);
 
   const toggleChapter = (chapterId: number) => {
     const newExpanded = new Set(expandedChapters);
@@ -79,7 +47,7 @@ export default function ExamsPage({ params }: ExamsPageProps) {
   };
 
   const filteredQuestions = selectedChapter
-    ? selectedChapter.questions.filter(q =>
+    ? selectedChapter.questions.filter((q: Question) =>
         filterType === 'all' ? true : q.type === filterType
       )
     : [];
@@ -219,7 +187,7 @@ export default function ExamsPage({ params }: ExamsPageProps) {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredQuestions.map(question => (
+                  {filteredQuestions.map((question: Question) => (
                     <ExamQuestionCard
                       key={question.id}
                       question_en={question.question_en}
