@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { prisma } from '@/lib/prisma';
 import DualLanguageToggle from '@/components/DualLanguageToggle';
+import NoteBlockRenderer from '@/components/NoteBlockRenderer';
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 
@@ -168,13 +169,14 @@ export default function NotesPage({ params }: NotesPageProps) {
                   key={note.id}
                   className="bg-slate-800 border border-slate-700 rounded-lg p-8"
                 >
-                  <h2 className="text-2xl font-bold text-white mb-4">
+                  <h2 className="text-2xl font-bold text-white mb-6">
                     {language === 'en' ? note.title_en : note.title_np}
                   </h2>
-                  <div className={`text-gray-300 leading-relaxed prose prose-invert max-w-none ${
-                    language === 'np' ? 'text-lg' : ''
-                  }`}>
-                    {language === 'en' ? note.content_en : note.content_np}
+                  <div className={language === 'np' ? 'text-lg' : ''}>
+                    <NoteBlockRenderer
+                      content={language === 'en' ? note.content_en : note.content_np || note.content_en}
+                      language={language}
+                    />
                   </div>
                 </article>
               ))}
