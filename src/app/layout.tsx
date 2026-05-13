@@ -16,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} bg-slate-950 text-white antialiased`}>
+      <body className={`${inter.className} bg-slate-950 text-white antialiased`} suppressHydrationWarning>
         <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
           {children}
         </div>

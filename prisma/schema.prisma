@@ -8,10 +8,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Faculty {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // "LLB", "BBS", etc
+  slug      String   @unique
+  years     Year[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Year {
-  id       Int      @id @default(autoincrement())
-  year     Int      @unique // 1, 2, 3
-  subjects Subject[]
+  id        Int      @id @default(autoincrement())
+  facultyId Int?
+  faculty   Faculty? @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  year      Int      // 1, 2, 3
+  name      String   @default("Year") // "First Year", "Second Year", etc
+  subjects  Subject[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -22,7 +34,7 @@ model Subject {
   year      Year     @relation(fields: [yearId], references: [id], onDelete: Cascade)
   name_en   String   // "Constitutional Law"
   name_np   String   // Nepali name
-  slug      String   @unique
+  slug      String
   icon      String?  // Lucide icon name
   chapters  Chapter[]
   createdAt DateTime @default(now())

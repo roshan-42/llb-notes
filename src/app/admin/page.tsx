@@ -95,31 +95,9 @@ export default function AdminDashboard() {
           >
             <BookOpen className="w-8 h-8 text-amber-500 mb-4" />
             <h3 className="text-lg font-semibold text-white group-hover:text-amber-400 transition-colors">
-              Manage Subjects
+              LLB Notes Editor
             </h3>
-            <p className="text-gray-400 text-sm mt-2">Create, edit, or delete subjects and chapters</p>
-          </Link>
-
-          <Link
-            href="/admin/notes"
-            className="p-8 rounded-lg border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 hover:border-blue-600/50 transition-all hover:shadow-xl hover:shadow-blue-600/10 group"
-          >
-            <BookOpen className="w-8 h-8 text-blue-500 mb-4" />
-            <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
-              Manage Notes
-            </h3>
-            <p className="text-gray-400 text-sm mt-2">Edit bilingual notes with side-by-side editor</p>
-          </Link>
-
-          <Link
-            href="/admin/questions"
-            className="p-8 rounded-lg border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 hover:border-purple-600/50 transition-all hover:shadow-xl hover:shadow-purple-600/10 group"
-          >
-            <BarChart3 className="w-8 h-8 text-purple-500 mb-4" />
-            <h3 className="text-lg font-semibold text-white group-hover:text-purple-400 transition-colors">
-              Manage Questions
-            </h3>
-            <p className="text-gray-400 text-sm mt-2">Add past and possible exam questions</p>
+            <p className="text-gray-400 text-sm mt-2">Manage subjects, chapters, notes, and questions. Create and edit bilingual content with block-based editor</p>
           </Link>
 
           <Link

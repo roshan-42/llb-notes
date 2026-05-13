@@ -15,8 +15,11 @@ export default async function YearPage({
     notFound();
   }
 
-  const yearData = await prisma.year.findUnique({
-    where: { year: yearNum },
+  const yearData = await prisma.year.findFirst({
+    where: {
+      year: yearNum,
+      faculty: { slug: 'llb' }
+    },
     include: {
       subjects: {
         orderBy: { slug: 'asc' }
