@@ -1,0 +1,281 @@
+================================================================================
+                  VERCEL DEPLOYMENT GUIDE - LLBNOTES
+                      Using Vercel Postgres
+================================================================================
+
+PROBLEM: Local Docker DB won't exist on Vercel. Use Vercel Postgres for
+production data accessible from any device.
+
+================================================================================
+STEP 1: CREATE VERCEL POSTGRES DATABASE
+================================================================================
+
+1. Go to vercel.com → Your Project → Storage tab
+2. Click "Create" → "Postgres"
+3. Name database: "llbnotes"
+4. Select region (closest to you)
+5. Click "Create"
+6. Vercel auto-adds DATABASE_URL to environment variables
+7. Done! Connection string created.
+
+Check connection in Vercel Dashboard:
+  Project → Storage → Postgres → .env.local
+  Copy the DATABASE_URL value (starts with postgresql://)
+
+================================================================================
+STEP 2: UPDATE ENVIRONMENT VARIABLES
+================================================================================
+
+Vercel auto-set DATABASE_URL when you created Postgres. Verify:
+
+1. Vercel Dashboard → Project Settings → Environment Variables
+2. Find DATABASE_URL
+3. It should be prefilled from your Vercel Postgres instance
+4. For NEXT_PUBLIC_API_URL, update to your deployed domain:
+   - During first deploy, Vercel gives you a URL like: https://llbnotes-xyz.vercel.app
+   - Set NEXT_PUBLIC_API_URL to that URL
+
+Environment Variables needed:
+  DATABASE_URL: postgresql://[auto-filled from Vercel Postgres]
+  NEXT_PUBLIC_API_URL: https://llbnotes-xyz.vercel.app
+
+Scope: Set all to "Production", "Preview", "Development"
+
+================================================================================
+STEP 3: LOCAL SETUP (optional but recommended)
+================================================================================
+
+Connect local dev to Vercel Postgres to test:
+
+1. In Vercel Dashboard → Storage → Postgres → .env.local
+2. Download .env.local file
+3. Copy DATABASE_URL value
+4. In your project, update .env:
+   DATABASE_URL="[paste value from Vercel]"
+   NEXT_PUBLIC_API_URL="http://localhost:3000"
+5. Run locally:
+   npm run dev
+6. Verify data syncs between local and Vercel
+
+Alternative: Keep local Docker DB separate
+  .env.local (for local Docker):
+    DATABASE_URL="postgresql://user:password@localhost:5432/llbnotes"
+  After deploy, Vercel env vars override .env
+
+================================================================================
+STEP 4: INITIALIZE DATABASE SCHEMA
+================================================================================
+
+Push schema to Vercel Postgres:
+
+Option A: From local (if connected to Vercel DB)
+  npm run db:push
+  npm run db:seed  (if you have test data)
+
+Option B: After initial deploy
+  Vercel runs "prisma generate && next build" on deploy
+  Manually push schema after deploy:
+  1. Connect to Vercel Postgres locally (Step 3)
+  2. npm run db:push
+  3. npm run db:seed
+
+This creates all tables (Faculty, Year, Subject, Chapter, Note, Question, User).
+
+================================================================================
+STEP 5: DEPLOY TO VERCEL
+================================================================================
+
+Method 1: Git + Vercel (automatic deploys) - RECOMMENDED
+--------
+1. Push code to GitHub:
+   git add .
+   git commit -m "Setup Vercel Postgres integration"
+   git push
+
+2. Go to vercel.com → New Project (or import existing)
+3. Select your GitHub repo
+4. Vercel auto-detects Next.js setup
+5. Click "Deploy"
+6. Wait for build to complete
+7. Get URL: https://llbnotes-xyz.vercel.app
+
+Method 2: Vercel CLI (manual)
+--------
+1. Install CLI: npm i -g vercel
+2. Run: vercel
+3. Follow prompts
+4. Choose environment variables setup
+5. Deploy
+
+After deploy:
+  ✓ Vercel runs: "prisma generate && next build"
+  ✓ Deploys to https://llbnotes-xyz.vercel.app
+  ✓ Auto-connects to Vercel Postgres via DATABASE_URL env var
+
+================================================================================
+STEP 6: VERIFY PRODUCTION
+================================================================================
+
+After deployment:
+
+1. Visit https://llbnotes-xyz.vercel.app
+2. Test basic functionality (navigate, load data)
+3. Test admin features (create note/question if applicable)
+4. Check Vercel logs:
+   Vercel Dashboard → Deployments → [Latest] → Logs
+5. Monitor database:
+   Vercel Dashboard → Storage → Postgres → Data
+
+Common issues:
+
+  "Cannot find module '@prisma/client'"
+  → npm run build locally to verify
+  → Check postinstall script in package.json
+
+  "Connection refused"
+  → DATABASE_URL not set in Vercel environment
+  → Check Project Settings → Environment Variables
+
+  "relation "faculty" does not exist"
+  → Schema not initialized
+  → Run: npm run db:push (after connecting to Vercel DB locally)
+
+  "No database selected"
+  → Vercel Postgres needs tables created
+  → Connect locally and run: npm run db:push
+
+================================================================================
+STEP 7: ONGOING WORKFLOW
+================================================================================
+
+Making schema changes:
+
+1. Locally:
+   - Update prisma/schema.prisma
+   - Run: npm run db:push
+   - Test: npm run dev
+
+2. Deploy:
+   - git add prisma/schema.prisma
+   - git commit -m "Update database schema"
+   - git push
+   - Vercel auto-deploys
+
+3. After deploy:
+   - Vercel Postgres is auto-updated if using migrations
+   - For db push, connect locally: npm run db:push
+
+Managing data:
+
+1. Browse/edit data in Vercel Postgres GUI:
+   Vercel Dashboard → Storage → Postgres → Query Editor
+
+2. Or use Prisma Studio (points to DATABASE_URL):
+   npm run db:studio
+   (Connects to Vercel Postgres if you have their URL in .env)
+
+3. Or use your app's admin interface (if available)
+
+================================================================================
+STEP 8: CONTINUOUS DEPLOYMENT
+================================================================================
+
+Vercel auto-deploys when you push to GitHub:
+
+1. Every `git push` triggers a new deploy
+2. Build logs visible in: Vercel Dashboard → Deployments
+3. Rollback available if deploy fails
+4. Preview deployments on pull requests
+
+Setup (already done):
+  - vercel.json: configured build command
+  - next.config.ts: allows Vercel domains in server actions
+  - package.json: includes postinstall script for Prisma
+
+No additional setup needed!
+
+================================================================================
+STEP 9: MONITORING & SCALING
+================================================================================
+
+Monitor performance:
+
+1. Database queries:
+   Vercel Postgres → Monitoring tab (if available)
+
+2. Application logs:
+   Vercel Dashboard → Deployments → Logs
+
+3. Performance metrics:
+   Vercel Dashboard → Analytics
+
+Backups:
+
+Vercel Postgres includes:
+  - Automatic daily backups
+  - Point-in-time recovery options
+  - Export data as SQL dump
+
+See: Vercel Postgres → Backups
+
+================================================================================
+CHECKLIST
+================================================================================
+
+Before deploying:
+  ☐ Created Vercel Postgres database
+  ☐ DATABASE_URL in Vercel environment variables
+  ☐ NEXT_PUBLIC_API_URL updated to Vercel domain
+  ☐ Code pushed to GitHub
+  ☐ Local build passes (npm run build)
+
+After deploying:
+  ☐ Vercel deployment successful (check Logs)
+  ☐ Site loads without errors
+  ☐ Can navigate and view data
+  ☐ Schema initialized (tables exist in Vercel Postgres)
+  ☐ Can create/update/delete data (if applicable)
+
+Optional:
+  ☐ Test admin features (if you have them)
+  ☐ Verify backups are enabled
+  ☐ Set up monitoring/alerts
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+Local development:
+  npm run dev                    # Starts dev server
+  npm run db:push               # Sync schema to database
+  npm run db:studio             # Browse/edit data
+  npm run db:seed               # Insert test data
+  npm run build                 # Test production build
+
+Production (Vercel):
+  Auto-deploy when you: git push
+  Data stored in: Vercel Postgres
+  Access from: Any device via https://your-app.vercel.app
+  Monitor: Vercel Dashboard
+
+Environment Variables:
+  Development: Your choice (Docker or Vercel DB)
+  Production: Vercel Postgres (auto-set)
+  Preview: Vercel Postgres (auto-set)
+
+Troubleshooting:
+  1. Check Vercel logs: Vercel Dashboard → Deployments → [Latest] → Logs
+  2. Check Vercel Postgres: Vercel Dashboard → Storage → Postgres
+  3. Test locally: npm run build && npm run start
+  4. Verify env vars: Vercel Dashboard → Settings → Environment Variables
+
+================================================================================
+RESOURCES
+================================================================================
+
+Vercel Postgres: vercel.com/docs/storage/postgres
+Prisma: prisma.io/docs
+Next.js: nextjs.org/docs
+Deployment help: vercel.com/support
+
+================================================================================
