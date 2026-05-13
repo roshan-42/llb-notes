@@ -12,8 +12,24 @@ export async function GET() {
               include: {
                 chapters: {
                   include: {
-                    notes: true,
-                    questions: true
+                    notes: {
+                      select: {
+                        id: true,
+                        title_en: true,
+                        title_np: true,
+                        chapterId: true,
+                        order: true
+                      }
+                    },
+                    questions: {
+                      select: {
+                        id: true,
+                        question_en: true,
+                        question_np: true,
+                        type: true,
+                        chapterId: true
+                      }
+                    }
                   }
                 }
               }
