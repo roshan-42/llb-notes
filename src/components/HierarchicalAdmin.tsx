@@ -81,14 +81,62 @@ export default function HierarchicalAdmin() {
       const res = await fetch('/api/admin/faculties');
       const data = await res.json();
       setFaculties(data);
-      if (data.length > 0) {
+      if (data.length > 0 && !selectedFaculty) {
         setSelectedFaculty(data[0]);
+      } else if (selectedFaculty) {
+        // Keep the selected faculty if it still exists
+        const found = data.find((f: Faculty) => f.id === selectedFaculty.id);
+        if (found) {
+          setSelectedFaculty(found);
+        } else if (data.length > 0) {
+          setSelectedFaculty(data[0]);
+        }
       }
     } catch (err) {
       setError('Failed to load faculties');
       console.error(err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const refetchAndMaintainState = async () => {
+    try {
+      const res = await fetch('/api/admin/faculties');
+      const data: Faculty[] = await res.json();
+      setFaculties(data);
+
+      // Try to keep current selections if they still exist
+      if (selectedFaculty) {
+        const foundFaculty = data.find((f: Faculty) => f.id === selectedFaculty.id);
+        if (foundFaculty) {
+          setSelectedFaculty(foundFaculty);
+
+          // Try to keep selected year
+          if (selectedYear) {
+            const foundYear = foundFaculty.years.find((y: Year) => y.id === selectedYear.id);
+            if (foundYear) {
+              setSelectedYear(foundYear);
+
+              // Try to keep selected subject
+              if (selectedSubject) {
+                const foundSubject = foundYear.subjects.find((s: Subject) => s.id === selectedSubject.id);
+                setSelectedSubject(foundSubject || null);
+              }
+            } else {
+              setSelectedYear(null);
+              setSelectedSubject(null);
+            }
+          }
+        } else {
+          setSelectedFaculty(data.length > 0 ? data[0] : null);
+          setSelectedYear(null);
+          setSelectedSubject(null);
+          setSelectedChapter(null);
+        }
+      }
+    } catch (err) {
+      console.error('Error refetching:', err);
     }
   };
 
@@ -239,9 +287,9 @@ export default function HierarchicalAdmin() {
           {!selectedFaculty ? (
             <div className="text-center text-gray-400">Select faculty from left sidebar</div>
           ) : !selectedYear ? (
-            <YearManager faculty={selectedFaculty} onYearSelect={setSelectedYear} />
+            <YearManager faculty={selectedFaculty} onYearSelect={setSelectedYear} onRefresh={refetchAndMaintainState} />
           ) : !selectedSubject ? (
-            <SubjectManager year={selectedYear} onSubjectSelect={setSelectedSubject} />
+            <SubjectManager year={selectedYear} onSubjectSelect={setSelectedSubject} onRefresh={refetchAndMaintainState} />
           ) : !selectedChapter ? (
             <div className="space-y-4">
               <div className="flex gap-2 border-b border-slate-700 pb-4">
@@ -271,6 +319,7 @@ export default function HierarchicalAdmin() {
                 <ChapterList
                   subject={selectedSubject}
                   onChapterSelect={setSelectedChapter}
+                  onRefresh={refetchAndMaintainState}
                 />
               )}
 
@@ -278,6 +327,7 @@ export default function HierarchicalAdmin() {
                 <ExamManager
                   subject={selectedSubject}
                   onChapterSelect={setSelectedChapter}
+                  onRefresh={refetchAndMaintainState}
                 />
               )}
             </div>
@@ -292,11 +342,11 @@ export default function HierarchicalAdmin() {
               </button>
 
               {contentType === 'notes' && selectedChapter && (
-                <NoteEditor chapter={selectedChapter} />
+                <NoteEditor chapter={selectedChapter} onRefresh={refetchAndMaintainState} />
               )}
 
               {contentType === 'exams' && selectedChapter && (
-                <QuestionsList chapter={selectedChapter} />
+                <QuestionsList chapter={selectedChapter} onRefresh={refetchAndMaintainState} />
               )}
             </div>
           )}
@@ -306,7 +356,7 @@ export default function HierarchicalAdmin() {
   );
 }
 
-function YearManager({ faculty, onYearSelect }: { faculty: Faculty; onYearSelect: (year: Year) => void }) {
+function YearManager({ faculty, onYearSelect, onRefresh }: { faculty: Faculty; onYearSelect: (year: Year) => void; onRefresh: () => Promise<void> }) {
   const [isAddingYear, setIsAddingYear] = useState(false);
   const [newYearNumber, setNewYearNumber] = useState(1);
   const [newYearName, setNewYearName] = useState('');
@@ -324,7 +374,7 @@ function YearManager({ faculty, onYearSelect }: { faculty: Faculty; onYearSelect
       });
 
       if (res.ok) {
-        window.location.reload();
+        onRefresh();
       }
     } catch (err) {
       console.error('Error adding year:', err);
@@ -401,7 +451,7 @@ function YearManager({ faculty, onYearSelect }: { faculty: Faculty; onYearSelect
                 onClick={(e) => {
                   e.stopPropagation();
                   if (confirm(`Delete Year ${year.year}?`)) {
-                    fetch(`/api/admin/years/${year.id}`, { method: 'DELETE' }).then(() => window.location.reload());
+                    fetch(`/api/admin/years/${year.id}`, { method: 'DELETE' }).then(() => onRefresh());
                   }
                 }}
                 className="p-1.5 rounded bg-red-600 hover:bg-red-500 text-white"
@@ -416,7 +466,7 @@ function YearManager({ faculty, onYearSelect }: { faculty: Faculty; onYearSelect
   );
 }
 
-function SubjectManager({ year, onSubjectSelect }: { year: Year; onSubjectSelect: (subject: Subject) => void }) {
+function SubjectManager({ year, onSubjectSelect, onRefresh }: { year: Year; onSubjectSelect: (subject: Subject) => void; onRefresh: () => Promise<void> }) {
   const [isAddingSubject, setIsAddingSubject] = useState(false);
   const [newSubjectEn, setNewSubjectEn] = useState('');
   const [newSubjectNp, setNewSubjectNp] = useState('');
@@ -434,7 +484,7 @@ function SubjectManager({ year, onSubjectSelect }: { year: Year; onSubjectSelect
       });
 
       if (res.ok) {
-        window.location.reload();
+        onRefresh();
       }
     } catch (err) {
       console.error('Error adding subject:', err);
@@ -512,7 +562,7 @@ function SubjectManager({ year, onSubjectSelect }: { year: Year; onSubjectSelect
                 onClick={(e) => {
                   e.stopPropagation();
                   if (confirm(`Delete ${subject.name_en}?`)) {
-                    fetch(`/api/admin/subjects?id=${subject.id}`, { method: 'DELETE' }).then(() => window.location.reload());
+                    fetch(`/api/admin/subjects?id=${subject.id}`, { method: 'DELETE' }).then(() => onRefresh());
                   }
                 }}
                 className="p-1.5 rounded bg-red-600 hover:bg-red-500 text-white"
@@ -527,7 +577,7 @@ function SubjectManager({ year, onSubjectSelect }: { year: Year; onSubjectSelect
   );
 }
 
-function ChapterList({ subject, onChapterSelect }: { subject: Subject; onChapterSelect: (chapter: Chapter) => void }) {
+function ChapterList({ subject, onChapterSelect, onRefresh }: { subject: Subject; onChapterSelect: (chapter: Chapter) => void; onRefresh: () => Promise<void> }) {
   const [isAddingChapter, setIsAddingChapter] = useState(false);
   const [newChapterEn, setNewChapterEn] = useState('');
   const [newChapterNp, setNewChapterNp] = useState('');
@@ -550,7 +600,7 @@ function ChapterList({ subject, onChapterSelect }: { subject: Subject; onChapter
       });
 
       if (res.ok) {
-        window.location.reload();
+        onRefresh();
       }
     } catch (err) {
       console.error('Error adding chapter:', err);
@@ -627,7 +677,7 @@ function ChapterList({ subject, onChapterSelect }: { subject: Subject; onChapter
                 onClick={(e) => {
                   e.stopPropagation();
                   if (confirm(`Delete Chapter ${chapter.order}: ${chapter.title_en}?`)) {
-                    fetch(`/api/admin/chapters?id=${chapter.id}`, { method: 'DELETE' }).then(() => window.location.reload());
+                    fetch(`/api/admin/chapters?id=${chapter.id}`, { method: 'DELETE' }).then(() => onRefresh());
                   }
                 }}
                 className="p-1 rounded bg-red-600 hover:bg-red-500 text-white"
@@ -642,7 +692,7 @@ function ChapterList({ subject, onChapterSelect }: { subject: Subject; onChapter
   );
 }
 
-function NoteEditor({ chapter }: { chapter: Chapter }) {
+function NoteEditor({ chapter, onRefresh }: { chapter: Chapter; onRefresh: () => Promise<void> }) {
   const [notes, setNotes] = useState<Note[]>(chapter.notes || []);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [isAddingNote, setIsAddingNote] = useState(false);
@@ -678,7 +728,7 @@ function NoteEditor({ chapter }: { chapter: Chapter }) {
       });
 
       if (res.ok) {
-        window.location.reload();
+        onRefresh();
       }
     } catch (err) {
       console.error('Error saving note:', err);
@@ -733,7 +783,7 @@ function NoteEditor({ chapter }: { chapter: Chapter }) {
                 onClick={(e) => {
                   e.stopPropagation();
                   if (confirm(`Delete note "${note.title_en}"?`)) {
-                    fetch(`/api/admin/notes/${note.id}`, { method: 'DELETE' }).then(() => window.location.reload());
+                    fetch(`/api/admin/notes/${note.id}`, { method: 'DELETE' }).then(() => onRefresh());
                   }
                 }}
                 className="p-1.5 rounded bg-red-600 hover:bg-red-500 text-white"
@@ -748,7 +798,7 @@ function NoteEditor({ chapter }: { chapter: Chapter }) {
   );
 }
 
-function ExamManager({ subject, onChapterSelect }: { subject: Subject; onChapterSelect: (chapter: Chapter) => void }) {
+function ExamManager({ subject, onChapterSelect, onRefresh }: { subject: Subject; onChapterSelect: (chapter: Chapter) => void; onRefresh: () => Promise<void> }) {
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold text-white">Chapters - {subject.name_en}</h2>
@@ -778,7 +828,7 @@ function ExamManager({ subject, onChapterSelect }: { subject: Subject; onChapter
                 onClick={(e) => {
                   e.stopPropagation();
                   if (confirm(`Delete Chapter ${chapter.order}: ${chapter.title_en}?`)) {
-                    fetch(`/api/admin/chapters?id=${chapter.id}`, { method: 'DELETE' }).then(() => window.location.reload());
+                    fetch(`/api/admin/chapters?id=${chapter.id}`, { method: 'DELETE' }).then(() => onRefresh());
                   }
                 }}
                 className="p-1.5 rounded bg-red-600 hover:bg-red-500 text-white"
@@ -793,7 +843,7 @@ function ExamManager({ subject, onChapterSelect }: { subject: Subject; onChapter
   );
 }
 
-function QuestionsList({ chapter }: { chapter: Chapter }) {
+function QuestionsList({ chapter, onRefresh }: { chapter: Chapter; onRefresh: () => Promise<void> }) {
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'past' | 'possible'>('all');
@@ -825,7 +875,7 @@ function QuestionsList({ chapter }: { chapter: Chapter }) {
       });
 
       if (res.ok) {
-        window.location.reload();
+        onRefresh();
       }
     } catch (err) {
       console.error('Error saving question:', err);
@@ -840,7 +890,7 @@ function QuestionsList({ chapter }: { chapter: Chapter }) {
       });
 
       if (res.ok) {
-        window.location.reload();
+        onRefresh();
       }
     } catch (err) {
       console.error('Error deleting question:', err);
