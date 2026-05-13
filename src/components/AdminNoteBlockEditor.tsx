@@ -7,7 +7,8 @@ export interface NoteBlock {
   id: string;
   type: 'heading' | 'subheading' | 'body' | 'image';
   content_en: string;
-  content_np: string;
+  content_np?: string;
+  caption?: string;
 }
 
 interface AdminNoteBlockEditorProps {
@@ -38,12 +39,13 @@ export default function AdminNoteBlockEditor({
       id: Math.random().toString(36).substr(2, 9),
       type,
       content_en: '',
-      content_np: ''
+      ...(type !== 'image' && { content_np: '' }),
+      ...(type === 'image' && { caption: '' })
     };
     setBlocks([...blocks, newBlock]);
   };
 
-  const updateBlock = (id: string, field: 'content_en' | 'content_np', value: string) => {
+  const updateBlock = (id: string, field: 'content_en' | 'content_np' | 'caption', value: string) => {
     setBlocks(blocks.map(b => (b.id === id ? { ...b, [field]: value } : b)));
     setError(null);
   };
@@ -70,9 +72,14 @@ export default function AdminNoteBlockEditor({
       return;
     }
 
-    const emptyBlocks = blocks.filter(b => !b.content_en.trim() && !b.content_np.trim());
+    const emptyBlocks = blocks.filter(b => {
+      if (b.type === 'image') {
+        return !b.content_en.trim();
+      }
+      return !b.content_en.trim() && !b.content_np?.trim();
+    });
     if (emptyBlocks.length > 0) {
-      setError('All blocks must have content in at least one language');
+      setError('All blocks must have content (images need URL, text blocks need English or Nepali)');
       return;
     }
 
@@ -189,9 +196,9 @@ export default function AdminNoteBlockEditor({
                   </div>
 
                   {block.type === 'image' ? (
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Image URL (EN)</label>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Image URL</label>
                         <input
                           type="url"
                           value={block.content_en}
@@ -202,14 +209,14 @@ export default function AdminNoteBlockEditor({
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Image URL (NP)</label>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Caption (optional)</label>
                         <input
-                          type="url"
-                          value={block.content_np}
-                          onChange={(e) => updateBlock(block.id, 'content_np', e.target.value)}
+                          type="text"
+                          value={block.caption || ''}
+                          onChange={(e) => updateBlock(block.id, 'caption', e.target.value)}
                           disabled={isSavingLocal || isSaving}
-                          placeholder="https://example.com/image.jpg"
-                          className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 disabled:opacity-50 text-sm"
+                          placeholder="Fig: Image name"
+                          className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 disabled:opacity-50 text-sm"
                         />
                       </div>
                     </div>

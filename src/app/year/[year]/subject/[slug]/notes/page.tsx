@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { prisma } from '@/lib/prisma';
 import DualLanguageToggle from '@/components/DualLanguageToggle';
 import NoteBlockRenderer from '@/components/NoteBlockRenderer';
-import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 
 interface Chapter {
@@ -37,6 +37,7 @@ export default function NotesPage({ params }: NotesPageProps) {
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     params.then(setParamsData);
@@ -83,9 +84,27 @@ export default function NotesPage({ params }: NotesPageProps) {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white"
+      >
+        {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+      </button>
+
+      {/* Overlay for mobile */}
+      {sidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-30"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-80 border-r border-slate-700 bg-slate-900 sticky top-0 h-screen overflow-y-auto">
+      <aside className={`fixed lg:relative w-80 border-r border-slate-700 bg-slate-900 h-screen overflow-y-auto z-40 transition-transform lg:transition-none ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
         <div className="p-6 border-b border-slate-700">
           <Link
             href={paramsData ? `/year/${paramsData.year}/subject/${paramsData.slug}` : '#'}
@@ -104,6 +123,7 @@ export default function NotesPage({ params }: NotesPageProps) {
                 onClick={() => {
                   setSelectedChapter(chapter);
                   setExpandedChapters(new Set([...expandedChapters, chapter.id]));
+                  setSidebarOpen(false);
                 }}
                 className={`w-full text-left px-4 py-3 rounded-lg transition-colors border ${
                   selectedChapter?.id === chapter.id
@@ -148,12 +168,12 @@ export default function NotesPage({ params }: NotesPageProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="flex-1 w-full lg:w-auto pt-16 lg:pt-0">
         {selectedChapter && (
           <>
             {/* Top Bar */}
-            <div className="sticky top-0 z-30 border-b border-slate-700 bg-slate-900/80 backdrop-blur-sm px-8 py-4 flex justify-between items-center">
-              <h1 className="text-xl font-semibold text-white">
+            <div className="sticky top-0 z-30 border-b border-slate-700 bg-slate-900/80 backdrop-blur-sm px-4 lg:px-8 py-4 flex justify-between items-center">
+              <h1 className="text-lg lg:text-xl font-semibold text-white truncate">
                 {language === 'en' ? selectedChapter.title_en : selectedChapter.title_np}
               </h1>
               <DualLanguageToggle
@@ -163,7 +183,7 @@ export default function NotesPage({ params }: NotesPageProps) {
             </div>
 
             {/* Content */}
-            <div className="p-8 space-y-8">
+            <div className="p-4 lg:p-8 space-y-8">
               {selectedChapter.notes.map(note => (
                 <article
                   key={note.id}

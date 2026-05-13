@@ -2,7 +2,8 @@ interface NoteBlock {
   id: string;
   type: 'heading' | 'subheading' | 'body' | 'image';
   content_en: string;
-  content_np: string;
+  content_np?: string;
+  caption?: string;
 }
 
 export default function NoteBlockRenderer({
@@ -47,13 +48,21 @@ export default function NoteBlockRenderer({
             );
           case 'image':
             return (
-              <figure key={block.id} className="my-8">
+              <figure key={block.id} className="my-8 flex flex-col items-center">
                 {text && (
                   <img
                     src={text}
-                    alt="Note illustration"
-                    className="w-full h-auto rounded-lg border border-slate-700"
+                    alt={block.caption || "Note illustration"}
+                    className="max-h-96 w-auto rounded-lg border border-slate-700"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
                   />
+                )}
+                {block.caption && (
+                  <figcaption className="text-sm text-gray-400 mt-3 text-center italic">
+                    Fig: {block.caption}
+                  </figcaption>
                 )}
               </figure>
             );
