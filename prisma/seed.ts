@@ -11,18 +11,27 @@ async function main() {
   await prisma.chapter.deleteMany();
   await prisma.subject.deleteMany();
   await prisma.year.deleteMany();
+  await prisma.faculty.deleteMany();
+
+  // Create Faculty
+  const faculty = await prisma.faculty.create({
+    data: {
+      name: 'LLB',
+      slug: 'llb'
+    }
+  });
 
   // Create Years
   const year1 = await prisma.year.create({
-    data: { year: 1 }
+    data: { year: 1, facultyId: faculty.id }
   });
 
   const year2 = await prisma.year.create({
-    data: { year: 2 }
+    data: { year: 2, facultyId: faculty.id }
   });
 
   const year3 = await prisma.year.create({
-    data: { year: 3 }
+    data: { year: 3, facultyId: faculty.id }
   });
 
   // Create Subjects for Year 1
