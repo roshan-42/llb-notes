@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2, Edit, ChevronDown, ChevronRight, AlertCircle, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import AdminNoteBlockEditor from './AdminNoteBlockEditor';
+import QuestionEditor from './QuestionEditor';
 
 interface Faculty {
   id: number;
@@ -271,6 +272,13 @@ export default function HierarchicalAdmin() {
                   onChapterSelect={setSelectedChapter}
                 />
               )}
+
+              {contentType === 'exams' && (
+                <ExamManager
+                  subject={selectedSubject}
+                  onChapterSelect={setSelectedChapter}
+                />
+              )}
             </div>
           ) : (
             <div className="space-y-4">
@@ -284,6 +292,10 @@ export default function HierarchicalAdmin() {
 
               {contentType === 'notes' && selectedChapter && (
                 <NoteEditor chapter={selectedChapter} />
+              )}
+
+              {contentType === 'exams' && selectedChapter && (
+                <QuestionsList chapter={selectedChapter} />
               )}
             </div>
           )}
@@ -736,6 +748,204 @@ function NoteEditor({ chapter }: { chapter: Chapter }) {
                   }
                 }}
                 className="p-1.5 rounded bg-red-600 hover:bg-red-500 text-white"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ExamManager({ subject, onChapterSelect }: { subject: Subject; onChapterSelect: (chapter: Chapter) => void }) {
+  return (
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">Chapters - {subject.name_en}</h2>
+      <div className="space-y-2">
+        {subject.chapters.map(chapter => (
+          <div key={chapter.id} className="relative group">
+            <button
+              onClick={() => onChapterSelect(chapter)}
+              className="w-full p-4 rounded-lg border border-slate-700 bg-slate-800 hover:border-purple-600/50 transition-colors text-left"
+            >
+              <div className="font-semibold text-white">Ch {chapter.order}: {chapter.title_en}</div>
+              <div className="text-sm text-gray-400">{chapter.title_np}</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {chapter.questions.filter(q => q.type === 'past').length} past • {chapter.questions.filter(q => q.type === 'possible').length} possible
+              </div>
+            </button>
+            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                className="p-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`Delete Chapter ${chapter.order}: ${chapter.title_en}?`)) {
+                    fetch(`/api/admin/chapters?id=${chapter.id}`, { method: 'DELETE' }).then(() => window.location.reload());
+                  }
+                }}
+                className="p-1.5 rounded bg-red-600 hover:bg-red-500 text-white"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function QuestionsList({ chapter }: { chapter: Chapter }) {
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [filterType, setFilterType] = useState<'all' | 'past' | 'possible'>('all');
+
+  const filteredQuestions = (chapter.questions || []).filter(q =>
+    filterType === 'all' ? true : q.type === filterType
+  );
+
+  const handleAddQuestion = () => {
+    setSelectedQuestion({
+      id: 0,
+      question_en: '',
+      question_np: '',
+      answer_en: '',
+      answer_np: '',
+      type: 'past',
+      chapterId: chapter.id
+    });
+    setIsEditing(true);
+  };
+
+  const handleSaveQuestion = async (questionData: Partial<Question>) => {
+    try {
+      const method = selectedQuestion?.id === 0 ? 'POST' : 'PUT';
+      const res = await fetch('/api/admin/questions', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(questionData)
+      });
+
+      if (res.ok) {
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Error saving question:', err);
+      throw err;
+    }
+  };
+
+  const handleDeleteQuestion = async (questionId: number) => {
+    try {
+      const res = await fetch(`/api/admin/questions/${questionId}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Error deleting question:', err);
+      throw err;
+    }
+  };
+
+  if (isEditing && selectedQuestion) {
+    return (
+      <>
+        <button
+          onClick={() => {
+            setIsEditing(false);
+            setSelectedQuestion(null);
+          }}
+          className="inline-flex items-center gap-2 text-amber-400 hover:text-amber-300 mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Questions
+        </button>
+        <QuestionEditor
+          chapter={chapter}
+          question={selectedQuestion.id === 0 ? undefined : selectedQuestion}
+          onSave={handleSaveQuestion}
+          onCancel={() => {
+            setIsEditing(false);
+            setSelectedQuestion(null);
+          }}
+          onDelete={handleDeleteQuestion}
+        />
+      </>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-2xl font-bold text-white">{chapter.title_en}</h3>
+        <button
+          onClick={handleAddQuestion}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Question
+        </button>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex gap-2">
+        {['all', 'past', 'possible'].map(type => (
+          <button
+            key={type}
+            onClick={() => setFilterType(type as 'all' | 'past' | 'possible')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
+              filterType === type
+                ? 'bg-purple-600 text-white'
+                : 'bg-slate-800 text-gray-300 hover:bg-slate-700'
+            }`}
+          >
+            {type === 'all' ? 'All' : type === 'past' ? 'Past' : 'Possible'}
+          </button>
+        ))}
+      </div>
+
+      <div className="text-gray-400 text-sm">
+        {filteredQuestions.length} question{filteredQuestions.length !== 1 ? 's' : ''}
+      </div>
+
+      <div className="space-y-2">
+        {filteredQuestions.map(question => (
+          <div
+            key={question.id}
+            className="relative group p-4 rounded-lg border border-slate-700 bg-slate-800 hover:border-purple-600/50 transition-colors cursor-pointer"
+            onClick={() => {
+              setSelectedQuestion(question);
+              setIsEditing(true);
+            }}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-purple-400 mb-1">
+                  {question.type === 'past' ? 'Past Question' : 'Possible Question'}
+                </div>
+                <div className="font-semibold text-white truncate">{question.question_en}</div>
+                <div className="text-sm text-gray-400 line-clamp-2">{question.answer_en}</div>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm('Delete this question?')) {
+                    handleDeleteQuestion(question.id);
+                  }
+                }}
+                className="p-1.5 rounded bg-red-600 hover:bg-red-500 text-white flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <Trash2 className="w-3 h-3" />
               </button>

@@ -10,14 +10,14 @@ export async function GET(request: Request) {
     if (subjectId) {
       const chapters = await prisma.chapter.findMany({
         where: { subjectId: parseInt(subjectId) },
-        include: { notes: true },
+        include: { notes: true, questions: true },
         orderBy: { order: 'asc' }
       });
       return NextResponse.json(chapters);
     }
 
     const chapters = await prisma.chapter.findMany({
-      include: { subject: true, notes: true },
+      include: { subject: true, notes: true, questions: true },
       orderBy: [{ subject: { year: { year: 'asc' } } }, { order: 'asc' }]
     });
 
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         title_np,
         order
       },
-      include: { notes: true }
+      include: { notes: true, questions: true }
     });
 
     revalidatePath('/admin/subjects');
@@ -78,7 +78,7 @@ export async function PUT(request: Request) {
         title_np,
         order
       },
-      include: { notes: true }
+      include: { notes: true, questions: true }
     });
 
     revalidatePath('/admin/subjects');

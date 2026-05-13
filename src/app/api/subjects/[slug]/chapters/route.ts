@@ -16,6 +16,9 @@ export async function GET(
       include: {
         notes: {
           orderBy: { order: 'asc' }
+        },
+        questions: {
+          orderBy: { createdAt: 'desc' }
         }
       },
       orderBy: { order: 'asc' }
