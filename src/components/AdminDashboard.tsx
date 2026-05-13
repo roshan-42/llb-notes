@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Plus, Trash2, Edit, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
-import AdminNoteBlockEditor, { NoteBlock } from './AdminNoteBlockEditor';
+import AdminNoteBlockEditor from './AdminNoteBlockEditor';
 
 interface Note {
   id: number;
   title_en: string;
   title_np: string;
   content_en: string;
+  content_np?: string;
   order: number;
   chapterId: number;
 }
@@ -106,24 +107,7 @@ export default function AdminDashboard() {
     setIsEditing(true);
   };
 
-  const parseBlocks = (content_en: string): NoteBlock[] => {
-    if (!content_en || content_en === '') return [];
-    try {
-      const parsed = JSON.parse(content_en);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (e) {
-      // Old format, convert to blocks
-      return [{
-        id: '1',
-        type: 'body',
-        content_en: content_en,
-        content_np: ''
-      }];
-    }
-    return [];
-  };
-
-  const handleSaveNote = async (blocks: NoteBlock[], title_en: string, title_np: string) => {
+  const handleSaveNote = async (content_en: string, content_np: string, title_en: string, title_np: string) => {
     if (!selectedNote) return;
 
     setIsSaving(true);
@@ -136,16 +120,16 @@ export default function AdminDashboard() {
             chapterId: selectedNote.chapterId,
             title_en,
             title_np,
-            content_en: JSON.stringify(blocks),
-            content_np: '',
+            content_en,
+            content_np,
             order: selectedNote.order
           }
         : {
             id: selectedNote.id,
             title_en,
             title_np,
-            content_en: JSON.stringify(blocks),
-            content_np: ''
+            content_en,
+            content_np
           };
 
       const res = await fetch(endpoint, {
@@ -378,50 +362,22 @@ export default function AdminDashboard() {
               </div>
 
               {/* Note Content Preview */}
-              <div className="space-y-4">
-                {parseBlocks(selectedNote.content_en).map((block, idx) => (
-                  <div key={idx} className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-                    <div className="text-xs font-medium text-amber-400 mb-3 uppercase">
-                      {block.type}
-                    </div>
-                    {block.type === 'image' ? (
-                      <div className="space-y-4">
-                        {block.content_en && (
-                          <div>
-                            <img
-                              src={block.content_en}
-                              alt="Block"
-                              className="max-w-full h-auto rounded"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                            />
-                          </div>
-                        )}
-                        {block.content_np && block.content_np !== block.content_en && (
-                          <div>
-                            <img
-                              src={block.content_np}
-                              alt="Block"
-                              className="max-w-full h-auto rounded"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ) : block.type === 'heading' ? (
-                      <h1 className="text-3xl font-bold text-white">{block.content_en || block.content_np}</h1>
-                    ) : block.type === 'subheading' ? (
-                      <h2 className="text-2xl font-semibold text-white">{block.content_en || block.content_np}</h2>
-                    ) : (
-                      <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
-                        {block.content_en || block.content_np}
-                      </p>
-                    )}
-                  </div>
-                ))}
+              <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 prose prose-invert max-w-none
+                [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-4 [&_h1]:mb-3
+                [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-gray-100 [&_h2]:mt-3 [&_h2]:mb-2
+                [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-gray-200 [&_h3]:mt-2 [&_h3]:mb-1
+                [&_p]:text-gray-300 [&_p]:leading-relaxed [&_p]:my-2
+                [&_strong]:font-bold [&_strong]:text-white
+                [&_em]:italic
+                [&_u]:underline
+                [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4
+                [&_li]:text-gray-300 [&_code]:bg-slate-900 [&_code]:px-1 [&_code]:rounded [&_code]:text-red-400
+                [&_a]:text-blue-400 [&_a]:underline">
+                {selectedNote.content_en && selectedNote.content_en.trim().startsWith('<') ? (
+                  <div dangerouslySetInnerHTML={{ __html: selectedNote.content_en }} />
+                ) : (
+                  <p>{selectedNote.content_en || 'No content'}</p>
+                )}
               </div>
             </div>
           )}
@@ -431,7 +387,8 @@ export default function AdminDashboard() {
       {/* Editor Modal */}
       {isEditing && selectedNote && (
         <AdminNoteBlockEditor
-          initialBlocks={parseBlocks(selectedNote.content_en)}
+          initialContent_en={selectedNote.content_en || ''}
+          initialContent_np={selectedNote.content_np || ''}
           noteTitle_en={selectedNote.title_en}
           noteTitle_np={selectedNote.title_np}
           onSave={handleSaveNote}

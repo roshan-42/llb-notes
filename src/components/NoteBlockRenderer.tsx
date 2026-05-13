@@ -10,32 +10,38 @@ interface NoteBlock {
   caption?: string;
 }
 
-export default function NoteBlockRenderer({
-  content,
-  language = 'en'
-}: {
-  content: string;
-  language?: 'en' | 'np';
-}) {
-  let blocks: NoteBlock[] = [];
+function isHtml(content: string): boolean {
+  return content.trim().startsWith('<');
+}
 
-  try {
-    const parsed = JSON.parse(content);
-    blocks = Array.isArray(parsed) ? parsed : [];
-  } catch {
-    // Old format plain text
-    blocks = [{
-      id: '1',
-      type: 'body',
-      content_en: content,
-      content_np: ''
-    }];
-  }
+function HtmlRenderer({ content }: { content: string }) {
+  return (
+    <div
+      className="prose prose-invert max-w-none
+        [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-6 [&_h1]:mb-4
+        [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-gray-100 [&_h2]:mt-5 [&_h2]:mb-3
+        [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-gray-200 [&_h3]:mt-4 [&_h3]:mb-2
+        [&_p]:text-gray-300 [&_p]:leading-relaxed [&_p]:my-4
+        [&_strong]:font-bold [&_strong]:text-white
+        [&_em]:italic [&_em]:text-gray-300
+        [&_u]:underline
+        [&_ul]:list-disc [&_ul]:ml-6 [&_ul]:my-4
+        [&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:my-4
+        [&_li]:text-gray-300 [&_li]:my-1
+        [&_code]:bg-slate-900 [&_code]:px-2 [&_code]:py-1 [&_code]:rounded [&_code]:text-red-400 [&_code]:text-sm
+        [&_pre]:bg-slate-900 [&_pre]:p-4 [&_pre]:rounded [&_pre]:overflow-x-auto [&_pre]:my-4
+        [&_blockquote]:border-l-4 [&_blockquote]:border-amber-600 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-gray-400 [&_blockquote]:my-4
+        [&_a]:text-blue-400 [&_a]:underline [&_a]:hover:text-blue-300"
+      dangerouslySetInnerHTML={{ __html: content }}
+    />
+  );
+}
 
+function BlockRenderer({ blocks }: { blocks: NoteBlock[] }) {
   return (
     <div className="space-y-6">
       {blocks.map((block) => {
-        const text = language === 'en' ? block.content_en : block.content_np || block.content_en;
+        const text = block.content_en;
 
         switch (block.type) {
           case 'heading':
@@ -56,7 +62,7 @@ export default function NoteBlockRenderer({
                 {text && (
                   <img
                     src={text}
-                    alt={block.caption || "Note illustration"}
+                    alt={block.caption || 'Note illustration'}
                     className="max-h-96 w-auto rounded-lg border border-slate-700"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';
@@ -81,4 +87,35 @@ export default function NoteBlockRenderer({
       })}
     </div>
   );
+}
+
+export default function NoteBlockRenderer({
+  content,
+  language = 'en'
+}: {
+  content: string;
+  language?: 'en' | 'np';
+}) {
+  // Check if content is HTML format (new format)
+  if (isHtml(content)) {
+    return <HtmlRenderer content={content} />;
+  }
+
+  // Otherwise, try to parse as JSON blocks (old format)
+  let blocks: NoteBlock[] = [];
+
+  try {
+    const parsed = JSON.parse(content);
+    blocks = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    // Fallback: treat as plain text body
+    blocks = [{
+      id: '1',
+      type: 'body',
+      content_en: content,
+      content_np: ''
+    }];
+  }
+
+  return <BlockRenderer blocks={blocks} />;
 }

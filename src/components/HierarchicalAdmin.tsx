@@ -45,6 +45,7 @@ interface Note {
   title_en: string;
   title_np: string;
   content_en: string;
+  content_np?: string;
   chapterId: number;
 }
 
@@ -658,7 +659,7 @@ function NoteEditor({ chapter }: { chapter: Chapter }) {
     setIsEditing(true);
   };
 
-  const handleSaveNote = async (blocks: any[], title_en: string, title_np: string) => {
+  const handleSaveNote = async (content_en: string, content_np: string, title_en: string, title_np: string) => {
     try {
       const method = selectedNote!.id === 0 ? 'POST' : 'PUT';
       const endpoint = '/api/admin/notes';
@@ -671,7 +672,8 @@ function NoteEditor({ chapter }: { chapter: Chapter }) {
           ...(selectedNote!.id === 0 && { chapterId: chapter.id }),
           title_en,
           title_np,
-          content_en: JSON.stringify(blocks)
+          content_en,
+          content_np
         })
       });
 
@@ -685,31 +687,18 @@ function NoteEditor({ chapter }: { chapter: Chapter }) {
 
   if (isEditing && selectedNote) {
     return (
-      <div className="flex flex-col h-full">
-        <button
-          onClick={() => {
-            setIsEditing(false);
-            setSelectedNote(null);
-          }}
-          className="inline-flex items-center gap-2 text-amber-400 hover:text-amber-300 mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Notes
-        </button>
-        <div className="flex-1 overflow-auto">
-          <AdminNoteBlockEditor
-            initialBlocks={selectedNote.content_en ? JSON.parse(selectedNote.content_en) : []}
-            noteTitle_en={selectedNote.title_en}
-            noteTitle_np={selectedNote.title_np}
-            onSave={handleSaveNote}
-            onCancel={() => {
-              setIsEditing(false);
-              setSelectedNote(null);
-            }}
-            isSaving={false}
-          />
-        </div>
-      </div>
+      <AdminNoteBlockEditor
+        initialContent_en={selectedNote.content_en || ''}
+        initialContent_np={selectedNote.content_np || ''}
+        noteTitle_en={selectedNote.title_en}
+        noteTitle_np={selectedNote.title_np}
+        onSave={handleSaveNote}
+        onCancel={() => {
+          setIsEditing(false);
+          setSelectedNote(null);
+        }}
+        isSaving={false}
+      />
     );
   }
 
