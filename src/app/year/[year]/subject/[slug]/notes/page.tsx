@@ -55,13 +55,15 @@ export default function NotesPage({ params }: NotesPageProps) {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white"
-      >
-        {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-      </button>
+      {/* Mobile Menu Button (hamburger) */}
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      )}
 
       {/* Overlay for mobile */}
       {sidebarOpen && (
@@ -76,13 +78,22 @@ export default function NotesPage({ params }: NotesPageProps) {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}>
         <div className="p-6 border-b border-slate-700">
-          <Link
-            href={paramsData ? `/year/${paramsData.year}/subject/${paramsData.slug}` : '#'}
-            className="inline-flex items-center gap-2 text-amber-500 hover:text-amber-400 mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Link>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <Link
+              href={paramsData ? `/year/${paramsData.year}/subject/${paramsData.slug}` : '#'}
+              className="inline-flex items-center gap-2 text-amber-500 hover:text-amber-400 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Link>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-1 rounded hover:bg-slate-800 transition-colors text-gray-400 hover:text-white"
+              title="Close sidebar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
           <h2 className="text-lg font-semibold text-white">Chapters</h2>
         </div>
 
